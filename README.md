@@ -9,10 +9,10 @@ This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape
 
 # Installation Steps
 1. Install the Python module for snscrape. 
-  - As of the time of writing, this can be done via `pip3 install snscrape`
-  - Check [snscrape's repo](https://github.com/JustAnotherArchivist/snscrape) for current instructions
+  As of the time of writing, this can be done via `pip3 install snscrape`
+  Check [snscrape's repo](https://github.com/JustAnotherArchivist/snscrape) for current instructions
 2. Change the placeholder text `[REPLACE WITH USERNAME. e.g., 'jack' (not @ sign)]` to the account you want to archive
-  - If you do **not** want to save retweets, remove `include:nativeretweets`
+  If you do **not** want to save retweets, remove `include:nativeretweets`
 3. (Optional) You may want to run this script via VPN or proxy 
 
 
@@ -20,7 +20,7 @@ This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape
 I currently don't have time to implement this, but I'd like to eventaully create two tables: `retweets` and `replied_to_tweets`. With these tables, the entire chain/thread of conversations can be saved offline, rather than only saving the tweet immediately retweeted/replied to (as is currently the case). This would provide additional context for future generations.
 
 # Why I've Made This
-One important aspect of Twitter is it's been a fabulous way of tracking events - when did people say, do or know things. This is important for the historical record, not being gaslit by authoritatirans, holding people accountable, and learning/improving. 
+One important aspect of Twitter is it's been a fabulous way of tracking events - when people knew, said or did things. This is important for the historical record, preventing authoritarian gaslighting, holding people accountable, and learning/improving. 
 
 There are also accounts that are just interesting, bring me joy and laughter, etc; and I'd be saddened at being unable to see those again.  
 
