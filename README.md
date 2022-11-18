@@ -6,17 +6,15 @@ This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape
 * Twitter may rate limit or block your IP, though I have not yet experienced this
 * Media (images, videos, etc.) not locally saved
 
-
 # Installation Steps
 1. Install the Python module for snscrape. 
      - As of the time of writing, this can be done via `pip3 install snscrape`
      - Check [snscrape's repo](https://github.com/JustAnotherArchivist/snscrape) for current instructions
 2. Change the placeholder text `[REPLACE WITH USERNAME. e.g., 'jack' (not @ sign)]` to the account you want to archive
-  If you do **not** want to save retweets, remove `include:nativeretweets`
+     - If you do **not** want to save retweets, remove `include:nativeretweets`
 3. (Optional) You may want to run this script via VPN or proxy 
 
-
-# Improvements
+# Areas for Improvement
 I currently don't have time to implement this, but I'd like to eventaully create two tables: `retweets` and `replied_to_tweets`. With these tables, the entire chain/thread of conversations can be saved offline, rather than only saving the tweet immediately retweeted/replied to (as is currently the case). This would provide additional context for future generations.
 
 # Why I've Made This
