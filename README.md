@@ -9,8 +9,8 @@ This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape
 
 # Installation Steps
 1. Install the Python module for snscrape. 
-  As of the time of writing, this can be done via `pip3 install snscrape`
-  Check [snscrape's repo](https://github.com/JustAnotherArchivist/snscrape) for current instructions
+     - As of the time of writing, this can be done via `pip3 install snscrape`
+     - Check [snscrape's repo](https://github.com/JustAnotherArchivist/snscrape) for current instructions
 2. Change the placeholder text `[REPLACE WITH USERNAME. e.g., 'jack' (not @ sign)]` to the account you want to archive
   If you do **not** want to save retweets, remove `include:nativeretweets`
 3. (Optional) You may want to run this script via VPN or proxy 
