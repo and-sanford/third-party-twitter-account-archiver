@@ -4,7 +4,7 @@ This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape
 **Limitations**
 * Tweets or user accounts that have been deleted will not be saved
 * Twitter may rate limit or block your IP, though I have not yet experienced this
-* Media (images, videos, etc.) not locally saved
+* Media (images, videos, etc.) are not locally saved, though their (almost always twitter-based) URLs are 
 
 
 # Installation Steps
