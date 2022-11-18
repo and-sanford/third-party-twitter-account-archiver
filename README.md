@@ -17,7 +17,9 @@ This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape
 
 
 # Areas for Improvement
-I currently don't have time to implement this, but I'd like to eventaully create two tables: `retweets` and `replied_to_tweets`. With these tables, the entire chain/thread of conversations can be saved offline, rather than only saving the tweet immediately retweeted/replied to (as is currently the case). This would provide additional context for future generations.
+I currently don't have time to implement this, but I'd like to eventaully create two tables: `retweets` and `replied_to_tweets`. 
+
+With these tables, the entire chain/thread of conversations can be saved offline, rather than only saving the tweet immediately retweeted/replied to (as is currently the case). This would provide additional context for future study and generations.
 
 
 # Why I've Made This
