@@ -1,4 +1,4 @@
-# third-party-twitter-archiver
+# Twitter Archiver for Third-party Accounts
 This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape) to archive all tweets from an individual Twitter user's accounts to a local [SQLite](https://www.sqlite.org/index.html) DB. [snscrape](https://github.com/JustAnotherArchivist/snscrape) easily bypasses Twitter's 3200 tweet limit, with no dev account or API keys required. 
 
 **Limitations**
