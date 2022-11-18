@@ -1,2 +1,3 @@
 # third-party-twitter-archiver
-Script to archive tweets from third-party twitter accounts
+This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape to archive
+
