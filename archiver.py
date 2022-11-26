@@ -71,7 +71,7 @@ def write_to_file(binary_data, file_name):
 START_TIME = datetime.datetime.now()
 
 #twitter account to search
-TWITTER_ACCOUNT = [REPLACE WITH USERNAME. e.g., 'jack' (exclude the @ sign)] # CHANGE THIS VALUE TO THE ACCOUNT YOU'RE ARCHIVING 
+TWITTER_ACCOUNT = "CHANGE_THIS_VALUE" # Change this value. e.g., TWITTER_ACCOUNT = "jack"
 
 # main table names
 # TWITTER_ACCOUNT, above, will be the main table's name
@@ -168,7 +168,7 @@ def exception_handling(e):
 
 def tweet_counter():
     global TWEETS_COUNT
-    TWEETS_COUNT += 1
+    TWEETS_COUNT += 1 #due to this program's recursive nature, the TWEETS_COUNT printed on-screen may seem inaccurate; however, it's counting correctly. You'll see scenarios where the same count number is printed multiple times - this is caused by the recursion
 
 def initialize_databases():
     for table_name in MAIN_TABLES: 
@@ -194,17 +194,11 @@ def initialize_databases():
                 [url] TEXT,
                 [user_all_data] TEXT,
                 [tweet_all_data] TEXT,
-                [video_url] TEXT,
-                [video_filename] TEXT,
-                [video_duration] TEXT,
-                [video_views] TEXT,
-                [video_content_blob] TEXT,
-                [photo_url] TEXT,
-                [photo_filename] TEXT,
-                [photo_content_blob] TEXT,
-                [gif_url] TEXT,
-                [gif_filename] TEXT,
-                [gif_content_blob] TEXT,
+                [media_url] TEXT,
+                [media_filename] TEXT,
+                [media_duration] TEXT,
+                [media_views] TEXT,
+                [media_content_blob] TEXT,
                 [quoted_tweet_id] INTEGER, 
                 [retweeted_tweet_id] INTEGER,
                 [replied_to_tweet_id] INTEGER
@@ -227,6 +221,11 @@ def initialize_databases():
         conn.commit()
 
 def download_media(media_url, filename): 
+    try:
+        urllib.request.urlretrieve(media_url, filename) #media is named username_tweet_id.[filetype]
+    except:
+        return None # if the media no longer exists, return None (which results in no file being created locally)
+
     return urllib.request.urlretrieve(media_url, filename) #media is named username_tweet_id.[filetype]
 
 def convert_to_binary_data(filename):
@@ -246,15 +245,15 @@ def print_inserting_into_db_message(table_name, tweet_id, username, datetime_cre
     print("\n>>> Inserting into DB:\nCurrent Time:\t", (datetime.datetime.now()).strftime("%Y-%m-%d %H:%M:%S"), "\nElapsed Time:\t", elapsed_time, "\nSaves/sec:\t", tweets_saved_per_second, "\nCount:\t\t", TWEETS_COUNT, "\nTable:\t\t", table_name, "\nTweet ID:\t", tweet_id, "\nTweet User:\t", "@",username, "\nTweet Date:\t", datetime_created_on)
     return
 
-def insert_into_main_table(table_name, tweet_id, datetime_created_on, username, rendered_content, conversation_id, like_count, reply_count, retweet_count, quote_count, source_label, source_url, url, user_all_data, tweet_all_data,  video_url, video_filename, video_duration, video_views, video_content_blob, photo_url, photo_filename, photo_content_blob, gif_url, gif_filename, gif_content_blob, quoted_tweet_id, retweeted_tweet_id, replied_to_tweet_id): 
+def insert_into_main_table(table_name, tweet_id, datetime_created_on, username, rendered_content, conversation_id, like_count, reply_count, retweet_count, quote_count, source_label, source_url, url, user_all_data, tweet_all_data, media_url, media_filename, media_duration, media_views, media_content_blob, quoted_tweet_id, retweeted_tweet_id, replied_to_tweet_id): 
     # logging.info("Inserting into DB:")
     print_inserting_into_db_message(table_name, tweet_id, username, datetime_created_on)
-    c.execute("INSERT INTO %s (tweet_id, datetime, username, rendered_content, conversation_id, like_count, reply_count, retweet_count, quote_count, source_label, source_url, url, user_all_data, tweet_all_data, video_url, video_filename, video_duration, video_views, video_content_blob, photo_url, photo_filename, photo_content_blob, gif_url, gif_filename, gif_content_blob, quoted_tweet_id, retweeted_tweet_id, replied_to_tweet_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" %table_name, (tweet_id, datetime_created_on, username, rendered_content, conversation_id, like_count, reply_count, retweet_count, quote_count, source_label, source_url, url, user_all_data, tweet_all_data,  video_url, video_filename, video_duration, video_views, video_content_blob, photo_url, photo_filename, photo_content_blob, gif_url, gif_filename, gif_content_blob, quoted_tweet_id, retweeted_tweet_id, replied_to_tweet_id)
+    c.execute("INSERT INTO %s (tweet_id, datetime, username, rendered_content, conversation_id, like_count, reply_count, retweet_count, quote_count, source_label, source_url, url, user_all_data, tweet_all_data, media_url, media_filename, media_duration, media_views, media_content_blob, quoted_tweet_id, retweeted_tweet_id, replied_to_tweet_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" %table_name, (tweet_id, datetime_created_on, username, rendered_content, conversation_id, like_count, reply_count, retweet_count, quote_count, source_label, source_url, url, user_all_data, tweet_all_data, media_url, media_filename, media_duration, media_views, media_content_blob, quoted_tweet_id, retweeted_tweet_id, replied_to_tweet_id)
 )
     conn.commit()    
     return
 
-def insert_into_junction_table(table_name, original_tweet_id, new_tweet_id):
+def insert_into_junction_table(table_name, original_tweet_id, new_tweet_id, username, datetime_created_on):
     if "quoted" in table_name:
         table_name = QUOTED_TWEETS_JUNCTION_TABLE_NAME
         new_id_name = JUNCTION_TALBES[QUOTED_TWEETS_JUNCTION_TABLE_NAME]
@@ -269,7 +268,7 @@ def insert_into_junction_table(table_name, original_tweet_id, new_tweet_id):
         # logging.error(error_message)
         return
     elapsed_time, tweets_saved_per_second = get_stats()
-    print_inserting_into_db_message(table_name, new_tweet_id, "n/a", "n/a")
+    print_inserting_into_db_message(table_name, new_tweet_id, username, datetime_created_on)
     c.execute("INSERT INTO %s (original_tweet_id, %s) VALUES (?, ?)" %(table_name, new_id_name), (original_tweet_id, new_tweet_id))
     conn.commit()
     return
@@ -293,50 +292,45 @@ def get_tweet(original_tweet_id=None, new_tweet_id=None, table_name=None, tweet=
                 insert_into_junction_table(table_name, original_tweet_id, new_tweet_id)
             return
 
-    # if these vars don't have data, initializing them to None type
-    video_url = None
-    video_filename = None
-    video_duration = None
-    video_views = None
-    video_content_blob = None
-    photo_url = None
-    photo_filename = None
-    photo_content_blob = None
-    gif_url = None
-    gif_filename = None
-    gif_content_blob = None 
     # placing these two vars first for later parts to function
     tweet_id = tweet.id 
     username = tweet.user.username
+
 
     datetime_created_on = str(tweet.date)
     conversation_id = tweet.conversationId
     like_count = tweet.likeCount
     media = tweet.media
-    media = tweet.media
+    media_duration = None
+    media_views = None
+    media_url = None
+    media_filename = None
+    media_content_blob = None
+    media_content = None
     if media is not None:
         media_type = str(type(media[0]))
         media_content = media[0]
         if "Video" in media_type:
-            video_duration = media_content.duration
-            video_views = media_content.views
-            video_url = (media_content.variants)[0].url #Twitter can, but does not always, save more than one version type ("variant" in snscrape) per video/gif. We'll use the first variant, because (1) this will keep the DB simpler and (2) after testing, the first variant appears to always be the highest-quality version
-            video_filename = str(username) + "_" + str(tweet_id) + ".mp4"
-            video_content = download_media(video_url, video_filename)
-            video_content_blob = convert_to_binary_data((video_content[0]))
-            os.remove(video_filename)
+            media_duration = media_content.duration
+            media_views = media_content.views
+            media_url = (media_content.variants)[0].url #Twitter can, but does not always, save more than one version type ("variant" in snscrape) per video/gif. We'll use the first variant, because (1) this will keep the DB simpler and (2) after testing, the first variant appears to always be the highest-quality version
+            media_filename = str(username) + "_" + str(tweet_id) + ".mp4"
+            media_content = download_media(media_url, media_filename) 
         elif "Photo" in media_type:
-            photo_url = media_content.fullUrl
-            photo_filename = str(username) + "_" + str(tweet_id) + ".jpg"
-            photo_content = download_media(photo_url, photo_filename)
-            photo_content_blob = convert_to_binary_data((photo_content[0]))
-            os.remove(photo_filename)
+            media_url = media_content.fullUrl
+            media_filename = str(username) + "_" + str(tweet_id) + ".jpg"
+            media_content = download_media(media_url, media_filename)
         elif "Gif" in media_type:
-            gif_url = (media_content.variants)[0].url
-            gif_filename = str(username) + "_" + str(tweet_id) + ".mp4"
-            gif_content = download_media(gif_url, gif_filename)
-            gif_content_blob = convert_to_binary_data((gif_content[0]))
-            os.remove(gif_filename)
+            media_url = (media_content.variants)[0].url
+            media_filename = str(username) + "_" + str(tweet_id) + ".mp4"
+            media_content = download_media(media_url, media_filename)
+        
+        if media_content is None:
+            media_content_blob = None
+        else:
+            media_content_blob = convert_to_binary_data(media_content[0])
+            os.remove(media_filename) #a file's not created if the media resource no longer exists
+    
     quote_count = tweet.quoteCount
     quoted_tweet = tweet.quotedTweet
     if quoted_tweet is not None:
@@ -363,9 +357,9 @@ def get_tweet(original_tweet_id=None, new_tweet_id=None, table_name=None, tweet=
     user_all_data = tweet.user.json()
     tweet_all_data = tweet.json()
     
-    insert_into_main_table(table_name, tweet_id, datetime_created_on, username, rendered_content, conversation_id, like_count, reply_count, retweet_count, quote_count, source_label, source_url, url, user_all_data, tweet_all_data,  video_url, video_filename, video_duration, video_views, video_content_blob, photo_url, photo_filename, photo_content_blob, gif_url, gif_filename, gif_content_blob, quoted_tweet_id, retweeted_tweet_id, replied_to_tweet_id)
+    insert_into_main_table(table_name, tweet_id, datetime_created_on, username, rendered_content, conversation_id, like_count, reply_count, retweet_count, quote_count, source_label, source_url, url, user_all_data, tweet_all_data, media_url, media_filename, media_duration, media_views, media_content_blob, quoted_tweet_id, retweeted_tweet_id, replied_to_tweet_id)
     if table_name is not ORIGINAL_ACCOUNT_TWEETS:
-        insert_into_junction_table(table_name, original_tweet_id, new_tweet_id)
+        insert_into_junction_table(table_name, original_tweet_id, new_tweet_id, username, datetime_created_on)
 
 def main():
     create_tweet_counter()
