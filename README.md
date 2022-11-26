@@ -4,8 +4,6 @@ This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape
 **Limitations**
 * Tweets or user accounts that have been deleted will not be saved
 * Twitter may rate limit or block your IP, though I have not yet experienced this
-* Media (images, videos, etc.) are not locally saved, though their (almost always twitter-based) URLs are 
-
 
 # Installation Steps
 1. Install the Python module for snscrape. 
@@ -15,12 +13,8 @@ This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape
      - If you do **not** want to save retweets, remove `include:nativeretweets`
 3. (Optional) You may want to run this script via VPN or proxy 
 
-
 # Areas for Improvement
-I currently don't have time to implement this, but I'd like to eventaully create two tables: `retweets` and `replied_to_tweets`. 
-
-With these tables, the entire chain/thread of conversations can be saved offline, rather than only saving the tweet immediately retweeted/replied to (as is currently the case). This would provide additional context for future study and generations.
-
+I don't have any major plans to improve this; however, create an issue or PR if you think a function should be added, code refractored, etc. 
 
 # Why I've Made This
 One important aspect of Twitter is it's been a fabulous way of tracking events - when people knew, said or did things. This is important for the historical record, preventing authoritarian gaslighting, holding people accountable, and learning/improving. 
