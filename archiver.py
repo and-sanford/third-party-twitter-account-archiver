@@ -139,6 +139,9 @@ ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 ch.setFormatter(CustomFormatter())
 logger.addHandler(ch)'''
+# --                    --
+# - End of Logging Setup - 
+# --                    --
 # ----------------------------------
 # --- END OF INITIALIZING SCRIPT ---
 # ----------------------------------
@@ -291,12 +294,9 @@ def get_tweet(original_tweet_id=None, new_tweet_id=None, table_name=None, tweet=
             if table_name is not ORIGINAL_ACCOUNT_TWEETS:
                 insert_into_junction_table(table_name, original_tweet_id, new_tweet_id)
             return
-
     # placing these two vars first for later parts to function
     tweet_id = tweet.id 
     username = tweet.user.username
-
-
     datetime_created_on = str(tweet.date)
     conversation_id = tweet.conversationId
     like_count = tweet.likeCount
@@ -352,7 +352,6 @@ def get_tweet(original_tweet_id=None, new_tweet_id=None, table_name=None, tweet=
         retweeted_tweet_id = None
     source_label = tweet.sourceLabel
     source_url = tweet.sourceUrl
-    
     url = tweet.url
     user_all_data = tweet.user.json()
     tweet_all_data = tweet.json()
