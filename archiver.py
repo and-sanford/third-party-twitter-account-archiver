@@ -288,7 +288,7 @@ def get_tweet(original_tweet_id=None, new_tweet_id=None, table_name=None, tweet=
             tweet_cannot_be_retrieved_message = "Tweet could not be retrieved. It's most likely been deleted."
             # logging.error(tweet_cannot_be_retrieved_message)
             print(tweet_cannot_be_retrieved_message)
-            insert_into_main_table(table_name, new_tweet_id, None, None, tweet_cannot_be_retrieved_message, None, None, None, None, None, None, None, None, None, None, None, None, None, None)
+            insert_into_main_table(table_name, new_tweet_id, None, None, tweet_cannot_be_retrieved_message, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None)
             if table_name is not ORIGINAL_ACCOUNT_TWEETS:
                 insert_into_junction_table(table_name, original_tweet_id, new_tweet_id)
             return
