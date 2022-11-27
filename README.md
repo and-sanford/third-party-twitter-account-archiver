@@ -5,13 +5,16 @@ This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape
 * Tweets or user accounts that have been deleted will not be saved
 * Twitter may rate limit or block your IP, though I have not yet experienced this
 
-# Installation Steps
+# Installation Steps (archiver.py)
 1. Install the Python module for snscrape. 
      - As of the time of writing, this can be done via `pip3 install snscrape`
      - Check [snscrape's repo](https://github.com/JustAnotherArchivist/snscrape) for current instructions
 2. Download `archiver.py`, and within it change the placeholder text `TWITTER_ACCOUNT = "CHANGE_THIS_VALUE" # Change this value. e.g., TWITTER_ACCOUNT = "jack"` to the account you want to archive
      - If you do **not** want to save retweets, remove `include:nativeretweets`
 3. (Optional) You may want to run this script via VPN or proxy 
+
+# Installation Steps (archiver_multiple.py)
+Same as the installation steps for `archiver.py`, except for step #2 add the usernames of all Twitter accounts to backup to the TWITTER_ACCOUNT list
 
 # Areas for Improvement
 I don't have any major plans to improve this; however, create an issue or PR if you think a function should be added, code refractored, etc. 
