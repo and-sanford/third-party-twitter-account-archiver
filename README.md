@@ -14,7 +14,7 @@ This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape
 3. (Optional) You may want to run this script via VPN or proxy 
 
 # Installation Steps (archiver_multiple.py)
-Same as the installation steps for `archiver.py`, except for step #2 add the usernames of all Twitter accounts to backup to the TWITTER_ACCOUNT list
+Same as the installation steps for `archiver.py`, except for step #2 add the usernames of all Twitter accounts to backup to the `TWITTER_ACCOUNT` list
 
 # Areas for Improvement
 I don't have any major plans to improve this; however, create an issue or PR if you think a function should be added, code refractored, etc. 
