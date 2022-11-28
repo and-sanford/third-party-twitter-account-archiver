@@ -7,7 +7,7 @@ import urllib.request
 
 ''' INTRODUCTION
 --- OVERVIEW --- 
-This program uses snscrape to archive all publicly available tweets from a given Twitter user, along with: 
+This program uses snscrape to archive all publicly available tweets from a list of Twitter useusersr, along with: 
 *Entire chains of retweets, quoted tweets replied to tweets 
 *Media (videos, photos, etc.)
 
@@ -15,11 +15,11 @@ snscrape is available here: https://github.com/JustAnotherArchivist/snscrape
 
 
 --- INSTRUCTIONS ---
-1. Change "TWITTER_ACCOUNT" value to the account you're archiving. Do NOT include the @ symbol
+1. Add the accounts you want to archive to the "TWITTER_ACCOUNTS" list. Do NOT include the @ symbol
 e.g., the term "jack" is valid, but "@jack" is not
 2. (Optional) Run this program on a VPN or via proxy. While blocking's not been observed, it may occur
 3. Wait for it to finish! Depending on the number of tweets to archive, your device's hardware, your internet connection, etc; this script may take up to a day to run
-4. (Optional) When finished, compress the DB. Doing so can reduce the DB's file size by over 90% 
+4. (Optional) When finished and to save space, compress the DB
 
 - Note on media (videos, photos, etc) -  
 To save media in sqlite, it *must* be converted to a BLOB - a Binary Large OBject (BLOB).
@@ -71,44 +71,28 @@ def write_to_file(binary_data, file_name):
 START_TIME = datetime.datetime.now()
 
 #twitter account to search
-TWITTER_ACCOUNT = "CHANGE_THIS_VALUE" # Change this value. e.g., TWITTER_ACCOUNT = "jack"
-# TWITTER_ACCOUNT = str(input("Enter twitter account handle: ")) #alternative to manually adding the username
+# Change this value. e.g., TWITTER_ACCOUNTS = ["jack"]
+TWITTER_ACCOUNTS = ["example1", "example2"] 
 
-# main table names
-# TWITTER_ACCOUNT, above, will be the main table's name
-# it's left above for ease of finding
-ORIGINAL_ACCOUNT_TWEETS = TWITTER_ACCOUNT + "_tweets"
-QUOTED_TWEETS_TABLE_NAME = "quoted_tweets"
-REPLIED_TO_TWEETS_TABLE_NAME = "replied_to_tweets"
-RETWEETS_TABLE_NAME = "retweets"
-
-# junction table names
-# "original_tweets" are the tweet that has quoted, replied from or is retweeting a given tweet. 
-# in this way, the original_tweet is relative to each quoted, replied to or retweeted tweet
-QUOTED_TWEETS_JUNCTION_TABLE_NAME = "quoted_tweets__to__original_tweets"
-REPLIED_TO_TWEETS_JUNCTION_TABLE_NAME = "replied_to_tweets__to__original_tweets"
-RETWEETS_TO_TWEETS_JUNCTION_TABLE_NAME = "retweets__to__original_tweets"
-
-# list/dict to initialize the databases
-MAIN_TABLES = [ORIGINAL_ACCOUNT_TWEETS, QUOTED_TWEETS_TABLE_NAME, REPLIED_TO_TWEETS_TABLE_NAME, RETWEETS_TABLE_NAME]
-JUNCTION_TALBES = {QUOTED_TWEETS_JUNCTION_TABLE_NAME:str(QUOTED_TWEETS_TABLE_NAME + "_id"), REPLIED_TO_TWEETS_JUNCTION_TABLE_NAME:str(REPLIED_TO_TWEETS_TABLE_NAME + "_id"), RETWEETS_TO_TWEETS_JUNCTION_TABLE_NAME:str(RETWEETS_TABLE_NAME + "_id")}
+#table names
+TWEETS_TABLE_NAME = "tweets" 
+USERS_TABLE_NAME = "users"
 
 # Connecting/creating database. The DB file will be saved to the directory you're running this script in
-conn = sqlite3.connect(TWITTER_ACCOUNT + "_tweets.db") 
+print("Connecting to database")
+conn = sqlite3.connect("tweets_archive.db") 
 c = conn.cursor()
-
 # --                       --
 # - End of Global Variables -
 # --                       --
 
-''' LOGGING
+'''LOGGING
 # --             --
 # - Logging Setup - 
 # --             --
 # Omitting for production - the other stats displayed are more valuable. 
 # But I've left this and other commented out logging functions (e.g., 
 # logging.info, logging.error, etc.) to make debugging easier
-
 class CustomFormatter(logging.Formatter):
     grey = "\x1b[38;21m"
     green = "\x1b[1;32m"
@@ -139,10 +123,11 @@ logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
 ch.setFormatter(CustomFormatter())
-logger.addHandler(ch)'''
+logger.addHandler(ch)
 # --                    --
 # - End of Logging Setup - 
 # --                    --
+'''
 # ----------------------------------
 # --- END OF INITIALIZING SCRIPT ---
 # ----------------------------------
@@ -151,89 +136,158 @@ logger.addHandler(ch)'''
 # ------------------------
 # --- SCRIPT FUNCTIONS ---
 # ------------------------
-def create_tweet_counter():
-    message = "Creating global TWEETS_COUNT variable"
+def create_archive_counter():
+    message = "Creating global ARCHIVED_ITEMS_COUNT variable"
     # logging.info(message)
     print(message)
-    global TWEETS_COUNT
-    TWEETS_COUNT = 0
+    global ARCHIVED_ITEMS_COUNT
+    ARCHIVED_ITEMS_COUNT = 0
 
-def create_exception_counter():
+def create_skipped_archive_counter():
+    message = "Creating global SKIPPED_ITEMS_COUNT variable"
+    # logging.info(message)
+    print(message)
+    global SKIPPED_ITEMS_COUNT
+    SKIPPED_ITEMS_COUNT = 0
+
+def create_total_items_viewed_counter():
+    message = "Creating global TOTAL_ITEMS_VIEWED variable"
+    # logging.info(message)
+    print(message)
+    global TOTAL_ITEMS_VIEWED
+    TOTAL_ITEMS_VIEWED = 0
+
+def create_error_counter():
     message = "Creating global ERROR_COUNTER variable"
     # logging.info(message)
     print(message)
     global ERROR_COUNT
     ERROR_COUNT = 0
 
-def exception_handling(e):
-    # logger.exception(e)
+def create_global_vars():
+    create_archive_counter()
+    create_skipped_archive_counter()
+    create_total_items_viewed_counter()
+    create_error_counter()
+
+def error_handling(e):
+    # logger.error(e)
     global ERROR_COUNT
     ERROR_COUNT += 1
 
-def tweet_counter():
-    global TWEETS_COUNT
-    TWEETS_COUNT += 1 #due to this program's recursive nature, the TWEETS_COUNT printed on-screen may seem inaccurate; however, it's counting correctly. You'll see scenarios where the same count number is printed multiple times - this is caused by the recursion
+def archive_counter():
+    global ARCHIVED_ITEMS_COUNT
+    ARCHIVED_ITEMS_COUNT += 1 #due to this program's recursive nature, the ARCHIVED_ITEMS_COUNT printed on-screen may seem inaccurate; however, it's counting correctly. You'll see scenarios where the same count number is printed multiple times - this is caused by the recursion
 
-def initialize_databases():
-    for table_name in MAIN_TABLES: 
-        message = "Creating table: %s" %table_name
-        # logging.info(message)
-        print(message)
-        c.execute('''
-                CREATE TABLE IF NOT EXISTS %s
-                (
-                [row_id] INTEGER PRIMARY KEY, 
-                [tweet_id] INTEGER, 
-                [datetime] TEXT,
-                [username] TEXT,
-                [rendered_content] TEXT,
-                [content] TEXT,
-                [conversation_id] INTEGER,
-                [like_count] INTEGER,
-                [reply_count] INTEGER,
-                [retweet_count] INTEGER,
-                [quote_count] INTEGER,
-                [source_label] TEXT,
-                [source_url] TEXT,
-                [url] TEXT,
-                [user_all_data] TEXT,
-                [tweet_all_data] TEXT,
-                [media_url] TEXT,
-                [media_filename] TEXT,
-                [media_duration] TEXT,
-                [media_views] TEXT,
-                [media_content_blob] TEXT,
-                [quoted_tweet_id] INTEGER, 
-                [retweeted_tweet_id] INTEGER,
-                [replied_to_tweet_id] INTEGER
-                )
-                ''' %table_name)
-        conn.commit()
+def skipped_archive_counter():
+    global SKIPPED_ITEMS_COUNT
+    SKIPPED_ITEMS_COUNT += 1
+    return 
 
-    for table_name, reference in JUNCTION_TALBES.items():
-        message = "Creating junction table: %s" %table_name
-        # logging.info(message)
-        print(message)
-        c.execute('''
-                CREATE TABLE IF NOT EXISTS %s
-                (
-                original_tweet_id INTEGER,
-                %s INTEGER,
-                FOREIGN KEY(original_tweet_id) REFERENCES original_tweet_id(id),
-                FOREIGN KEY(%s) REFERENCES %s(id)
-                )''' % (table_name, reference, reference, reference))  
-        conn.commit()
+def total_items_viewed_counter():
+    global TOTAL_ITEMS_VIEWED
+    TOTAL_ITEMS_VIEWED = ARCHIVED_ITEMS_COUNT + SKIPPED_ITEMS_COUNT
+
+def initialize_database():
+    # TWEETS TABLE
+    message = "Creating tweets table"
+    # logging.info(message)
+    print(message)
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS tweets
+    (
+    [tweet_id] INTEGER PRIMARY KEY, 
+    [tweet_user_name] TEXT, 
+    [tweet_datetime] TEXT,
+    [tweet_content] TEXT, 
+    [tweet_media_content_blob] TEXT,
+    [tweet_latitude] REAL,
+    [tweet_longitude] REAL,
+    [tweet_conversation_id] INTEGER,
+    [tweet_hashtags] TEXT,
+    [tweet_like_count] INTEGER,
+    [tweet_language] TEXT,
+    [tweet_media_filename] TEXT,
+    [tweet_media_duration] TEXT,
+    [tweet_media_views] INTEGER,
+    [tweet_media_url] TEXT,
+    [tweet_mentioned_users] TEXT,
+    [tweet_place_full_name] TEXT,
+    [tweet_place_name] TEXT,
+    [tweet_place_type] TEXT,
+    [tweet_place_country] TEXT,
+    [tweet_place_country_code] TEXT,
+    [tweet_quote_count] INTEGER,
+    [tweet_quoted_tweet_id] INTEGER,
+    [tweet_replied_to_tweet_id] INTEGER,
+    [tweet_reply_count] INTEGER, 
+    [tweet_retweet_count] INTEGER, 
+    [tweet_retweeted_tweet_id] INTEGER,
+    [tweet_source_app] TEXT,
+    [tweet_url] TEXT,
+    [tweet_user_id] INTEGER, 
+    UNIQUE (tweet_id),
+    FOREIGN KEY(tweet_user_id) REFERENCES users(user_id)
+    FOREIGN KEY(tweet_quoted_tweet_id) REFERENCES tweets(tweet_id)
+    FOREIGN KEY(tweet_replied_to_tweet_id) REFERENCES tweets(tweet_id)
+    FOREIGN KEY(tweet_retweeted_tweet_id) REFERENCES tweets(tweet_id)
+    )''')
+    conn.commit()
+    message = "Created tweets table"
+    # logging.info(message)
+    print(message)
+    # END OF TWEETS TABLE
+
+    # USERS TABLE
+    message = "Creating users table"
+    # logging.info(message)
+    print(message)
+    c.execute('''
+    CREATE TABLE IF NOT EXISTS users
+    (
+    [user_id] INTEGER PRIMARY KEY,
+    [user_username] TEXT,
+    [user_display_name] TEXT,
+    [user_description] TEXT,
+    [user_verified] TEXT,
+    [user_account_datetime_created] TEXT,
+    [user_followers_count] INTEGER,
+    [user_friends_count] INTEGER,
+    [user_status_count] INTEGER,
+    [user_favorites_count] INTEGER,
+    [user_listed_count] INTEGER,
+    [user_location] TEXT,
+    [user_media_count] INTEGER,
+    [user_account_protected] TEXT,
+    [user_linked_url] TEXT,
+    [user_profile_picture] TEXT,
+    [user_profile_banner_picture] TEXT,
+    [user_label] TEXT,
+    [user_twitter_url] TEXT,
+    UNIQUE (user_id)
+    )''')
+    conn.commit()
+    message = "Created users table"
+    # logging.info(message)
+    print(message)
+    # END OF USERS TABLE
 
 def download_media(media_url, filename): 
     try:
         urllib.request.urlretrieve(media_url, filename) #media is named username_tweet_id.[filetype]
-    except:
+    except Exception as e:
+        # error_handling(e)
         return None # if the media no longer exists, return None (which results in no file being created locally)
 
     return urllib.request.urlretrieve(media_url, filename) #media is named username_tweet_id.[filetype]
 
 def convert_to_binary_data(filename):
     # Convert digital data to binary format
+    try:
+        open(filename, 'rb')
+    except Exception as e:
+        # error_handling(e)
+        return None
     with open(filename, 'rb') as file:
         blobData = file.read()
     return blobData
@@ -241,132 +295,246 @@ def convert_to_binary_data(filename):
 def get_stats():
     elapsed_time = datetime.datetime.now() - START_TIME
     elapsed_time_mins = elapsed_time.total_seconds()
-    tweets_saved_per_second = round((TWEETS_COUNT/elapsed_time_mins), 1)
-    return elapsed_time, tweets_saved_per_second
+    saved_per_second = round((ARCHIVED_ITEMS_COUNT/elapsed_time_mins), 1)
+    attempted_saved_per_second = round((TOTAL_ITEMS_VIEWED/elapsed_time_mins), 1)
+    total_items_viewed_counter()
+    return elapsed_time, saved_per_second, attempted_saved_per_second
 
-def print_inserting_into_db_message(table_name, tweet_id, username, datetime_created_on):
-    elapsed_time, tweets_saved_per_second = get_stats()
-    print("\n>>> Inserting into DB:\nCurrent Time:\t", (datetime.datetime.now()).strftime("%Y-%m-%d %H:%M:%S"), "\nElapsed Time:\t", elapsed_time, "\nSaves/sec:\t", tweets_saved_per_second, "\nCount:\t\t", TWEETS_COUNT, "\nTable:\t\t", table_name, "\nTweet ID:\t", tweet_id, "\nTweet User:\t", "@",username, "\nTweet Date:\t", datetime_created_on)
+def print_inserting_into_db_message(table_name, tweet_or_user_id, username, datetime_created_on):
+    elapsed_time, items_archived_per_second, attempted_saved_per_second = get_stats()
+    if "tweet" in table_name:
+        saved_resource = "Tweet"
+    elif "user" in table_name:
+        saved_resource = "User"
+    else:
+        error_handling("Unknown data type attempted to save")
+        saved_resource = "Unknown"
+    print("\n>>> Inserting into " + table_name + " table:" + "\nCurrent Time:\t\t", (datetime.datetime.now()).strftime("%Y-%m-%d %H:%M:%S"), "\nElapsed Time:\t\t", elapsed_time, "\nTable:\t\t\t", table_name, "\n" + saved_resource + ":\t\t\t", tweet_or_user_id, "\nUser:\t\t\t", "@", username, "\nCreation Date:\t\t", datetime_created_on, "\n\nSaves/sec:\t\t", items_archived_per_second, "\nAttempted saves/sec:\t", attempted_saved_per_second, "\nArchived Count:\t\t", ARCHIVED_ITEMS_COUNT, "\nSkipped Count:\t\t", SKIPPED_ITEMS_COUNT, "\nTotal Count:\t\t", TOTAL_ITEMS_VIEWED)
     return
 
-def insert_into_main_table(table_name, tweet_id, datetime_created_on, username, rendered_content, conversation_id, like_count, reply_count, retweet_count, quote_count, source_label, source_url, url, user_all_data, tweet_all_data, media_url, media_filename, media_duration, media_views, media_content_blob, quoted_tweet_id, retweeted_tweet_id, replied_to_tweet_id): 
-    # logging.info("Inserting into DB:")
-    print_inserting_into_db_message(table_name, tweet_id, username, datetime_created_on)
-    c.execute("INSERT INTO %s (tweet_id, datetime, username, rendered_content, conversation_id, like_count, reply_count, retweet_count, quote_count, source_label, source_url, url, user_all_data, tweet_all_data, media_url, media_filename, media_duration, media_views, media_content_blob, quoted_tweet_id, retweeted_tweet_id, replied_to_tweet_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)" %table_name, (tweet_id, datetime_created_on, username, rendered_content, conversation_id, like_count, reply_count, retweet_count, quote_count, source_label, source_url, url, user_all_data, tweet_all_data, media_url, media_filename, media_duration, media_views, media_content_blob, quoted_tweet_id, retweeted_tweet_id, replied_to_tweet_id)
-)
+def insert_into_tweets_table(tweet_id, tweet_user_name, tweet_datetime, tweet_content, tweet_media_content_blob, tweet_latitude, tweet_longitude, tweet_conversation_id, tweet_hashtags, tweet_like_count, tweet_language, tweet_media_filename, tweet_media_duration, tweet_media_views, tweet_media_url, tweet_mentioned_users, tweet_place_full_name, tweet_place_name, tweet_place_type, tweet_place_country, tweet_place_country_code, tweet_quote_count, tweet_quoted_tweet_id, tweet_replied_to_tweet_id, tweet_reply_count, tweet_retweet_count, tweet_retweeted_tweet_id, tweet_source_app, tweet_url, tweet_user_id): 
+    # logging.info("Inserting into tweet table:")
+    print_inserting_into_db_message("tweets", tweet_id, tweet_user_name, tweet_datetime)
+    archive_counter()
+    c.execute("INSERT INTO tweets (tweet_id, tweet_user_name, tweet_datetime, tweet_content, tweet_media_content_blob, tweet_latitude, tweet_longitude, tweet_conversation_id, tweet_hashtags, tweet_like_count, tweet_language, tweet_media_filename, tweet_media_duration, tweet_media_views, tweet_media_url, tweet_mentioned_users, tweet_place_full_name, tweet_place_name, tweet_place_type, tweet_place_country, tweet_place_country_code, tweet_quote_count, tweet_quoted_tweet_id, tweet_replied_to_tweet_id, tweet_reply_count, tweet_retweet_count, tweet_retweeted_tweet_id, tweet_source_app, tweet_url, tweet_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (tweet_id, tweet_user_name, tweet_datetime, tweet_content, tweet_media_content_blob, tweet_latitude, tweet_longitude, tweet_conversation_id, tweet_hashtags, tweet_like_count, tweet_language, tweet_media_filename, tweet_media_duration, tweet_media_views, tweet_media_url, tweet_mentioned_users, tweet_place_full_name, tweet_place_name, tweet_place_type, tweet_place_country, tweet_place_country_code, tweet_quote_count, tweet_quoted_tweet_id, tweet_replied_to_tweet_id, tweet_reply_count, tweet_retweet_count, tweet_retweeted_tweet_id, tweet_source_app, tweet_url, tweet_user_id))
     conn.commit()    
     return
 
-def insert_into_junction_table(table_name, original_tweet_id, new_tweet_id, username, datetime_created_on):
-    if "quoted" in table_name:
-        table_name = QUOTED_TWEETS_JUNCTION_TABLE_NAME
-        new_id_name = JUNCTION_TALBES[QUOTED_TWEETS_JUNCTION_TABLE_NAME]
-    elif "replied" in table_name:
-        table_name = REPLIED_TO_TWEETS_JUNCTION_TABLE_NAME
-        new_id_name = JUNCTION_TALBES[REPLIED_TO_TWEETS_JUNCTION_TABLE_NAME]
-    elif "retweets" in table_name:
-        table_name = RETWEETS_TO_TWEETS_JUNCTION_TABLE_NAME
-        new_id_name = JUNCTION_TALBES[RETWEETS_TO_TWEETS_JUNCTION_TABLE_NAME]
-    else:
-        error_message = "Junction table '" + table_name + "' does not exist - aborting attempt"
-        # logging.error(error_message)
-        return
-    elapsed_time, tweets_saved_per_second = get_stats()
-    print_inserting_into_db_message(table_name, new_tweet_id, username, datetime_created_on)
-    c.execute("INSERT INTO %s (original_tweet_id, %s) VALUES (?, ?)" %(table_name, new_id_name), (original_tweet_id, new_tweet_id))
-    conn.commit()
+def insert_into_users_table(user_id, user_username, user_display_name, user_description, user_verified, user_account_datetime_created, user_followers_count, user_friends_count, user_status_count, user_favorites_count, user_listed_count, user_media_count, user_location, user_account_protected, user_linked_url, user_profile_picture, user_profile_banner_picture, user_label, user_twitter_url):
+    # logging.info("Inserting into users table")
+    print_inserting_into_db_message("users", user_id, user_username, user_account_datetime_created)
+    archive_counter()
+    c.execute("INSERT INTO users (user_id, user_username, user_display_name, user_description, user_verified, user_account_datetime_created, user_followers_count, user_friends_count, user_status_count, user_favorites_count, user_listed_count, user_media_count, user_location, user_account_protected, user_linked_url, user_profile_picture, user_profile_banner_picture, user_label, user_twitter_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (user_id, user_username, user_display_name, user_description, user_verified, user_account_datetime_created, user_followers_count, user_friends_count, user_status_count, user_favorites_count, user_listed_count, user_media_count, user_location, user_account_protected, user_linked_url, user_profile_picture, user_profile_banner_picture, user_label, user_twitter_url))
+    conn.commit()  
     return
 
-def get_tweet(original_tweet_id=None, new_tweet_id=None, table_name=None, tweet=None):
-    # this utilizes recursion to archive the entire chain of retweets, quoted tweets and replied to tweets
-    # logging.info("Pulling data for tweet with ID " + str(new_tweet_id))
-    tweet_counter()
+def check_if_artifact_exists_in_db(table_name, artifact_id):
+    #artifact_id can be type str or int
+    message = "Checking if " + str(artifact_id) + " already exists in " + table_name
+    # logging.info(message)
+    if "tweet" in table_name:
+        column_name = "tweet_id"
+    elif "user" in table_name:
+        column_name = "user_id"
+    else:
+        error_handling("Table" + table_name + "does not exist")
+        return False
 
-    if tweet is None:
-        try:
-            _tmp_tweet = enumerate(sntwitter.TwitterTweetScraper(str(new_tweet_id)).get_items())
-            for _tmp,tweet in _tmp_tweet:
-                tweet = tweet
-        except Exception as e: 
-            tweet_cannot_be_retrieved_message = "Tweet could not be retrieved. It's most likely been deleted."
-            # logging.error(tweet_cannot_be_retrieved_message)
-            print(tweet_cannot_be_retrieved_message)
-            insert_into_main_table(table_name, new_tweet_id, None, None, tweet_cannot_be_retrieved_message, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None)
-            if table_name is not ORIGINAL_ACCOUNT_TWEETS:
-                insert_into_junction_table(table_name, original_tweet_id, new_tweet_id, None, None)
-            return
-    # placing these two vars first for later parts to function
-    tweet_id = tweet.id 
-    username = tweet.user.username
-    datetime_created_on = str(tweet.date)
-    conversation_id = tweet.conversationId
-    like_count = tweet.likeCount
-    media = tweet.media
-    media_duration = None
-    media_views = None
-    media_url = None
-    media_filename = None
-    media_content_blob = None
-    media_content = None
-    if media is not None:
-        media_type = str(type(media[0]))
-        media_content = media[0]
-        if "Video" in media_type:
-            media_duration = media_content.duration
-            media_views = media_content.views
-            media_url = (media_content.variants)[0].url #Twitter can, but does not always, save more than one version type ("variant" in snscrape) per video/gif. We'll use the first variant, because (1) this will keep the DB simpler and (2) after testing, the first variant appears to always be the highest-quality version
-            media_filename = str(username) + "_" + str(tweet_id) + ".mp4"
-            media_content = download_media(media_url, media_filename) 
-        elif "Photo" in media_type:
-            media_url = media_content.fullUrl
-            media_filename = str(username) + "_" + str(tweet_id) + ".jpg"
-            media_content = download_media(media_url, media_filename)
-        elif "Gif" in media_type:
-            media_url = (media_content.variants)[0].url
-            media_filename = str(username) + "_" + str(tweet_id) + ".mp4"
-            media_content = download_media(media_url, media_filename)
+    c.execute('''
+        SELECT EXISTS (
+            SELECT 1
+            FROM %s
+            WHERE %s = %s
+        )''' %(table_name, column_name, artifact_id))
+    exists = (c.fetchall())[0][0] #1 == Exists; 0 == Does not exist;
+
+    if exists == 1:
+        # message = str(artifact_id) + " already exists in " + table_name
+        # logging.info(message)
+        # print(message)
+        skipped_archive_counter()
+        print_inserting_into_db_message(table_name, artifact_id, "Already exists in table", "Already exists in table")
+        return True
+    else:
+        # logging.info(str(artifact_id) + " does NOT exist in " + table_name)
+        return False
+
+def get_media(media, tweet_or_user_id, username, media_url=None, media_filename=None):
+    # logging.info("Downloading media ")
+    # print("\nDownloading media")
+    if media_url is not None:
+        media_content = download_media(media_url, media_filename)
+        media_duration = None
+        media_views = None
+    else:
+        media_duration = None
+        media_views = None
+        media_url = None
+        media_filename = None
+        media_content_blob = None # blobs (as binary formats) are already quite compressed, and attempts to compress create a number of complications
+        media_content = None
+
+        if media is not None:
+            media_type = str(type(media[0]))
+            media_content = media[0]
+            if "Video" in media_type:
+                media_duration = media_content.duration
+                media_views = media_content.views
+                media_url = (media_content.variants)[0].url #Twitter can, but does not always, save more than one version type ("variant" in snscrape) per video/gif. We'll use the first variant, because (1) this will keep the DB simpler and (2) after testing, the first variant appears to always be the highest-quality version
+                media_filename = str(username) + "_" + str(tweet_or_user_id) + ".mp4"
+                media_content = download_media(media_url, media_filename) 
+            elif "Photo" in media_type:
+                media_url = media_content.fullUrl
+                media_filename = str(username) + "_" + str(tweet_or_user_id) + ".jpg"
+                media_content = download_media(media_url, media_filename)
+            elif "Gif" in media_type:
+                media_url = (media_content.variants)[0].url
+                media_filename = str(username) + "_" + str(tweet_or_user_id) + ".mp4"
+                media_content = download_media(media_url, media_filename)        
+
+    if media_content is None:
+        media_content_blob = None
+    else:
+        media_content_blob = convert_to_binary_data(media_content[0])
+        if media_content_blob is not None:
+            try:
+                os.remove(media_filename) #a file's not created if the media resource no longer exists
+            except Exception as e:
+                # error_handling(e)
+                pass
+    
+    return media_content_blob, media_duration, media_views, media_url, media_filename 
+
+def archive_user(user_data):
+    # logging.info("Running archive_user() function")
+
+    user_id = user_data.id
+
+    if check_if_artifact_exists_in_db("users", user_id) is True:
+        return
+    else:
+        # logging.info("Data for user with ID " + str(user_id) + " has been pulled. Compiling data...")
+        user_username = user_data.username
+        user_display_name = user_data.displayname
+        user_description = user_data.description
+        user_verified = user_data.verified
+        user_account_datetime_created = user_data.created
+        user_followers_count = user_data.followersCount
+        user_friends_count = user_data.friendsCount
+        user_status_count = user_data.statusesCount
+        user_favorites_count = user_data.favouritesCount
+        user_listed_count = user_data.listedCount
+        user_media_count = user_data.mediaCount
+        user_location = user_data.location
+        user_account_protected = user_data.protected
+        user_linked_url = user_data.linkUrl
+        user_profile_picture, _media_duration, _media_views, _media_url, _media_filename = get_media(None, None, None, user_data.profileImageUrl, user_username+"_profile_picture")
+        user_profile_banner_picture, _media_duration, _media_views, _media_url, _media_filename = get_media(None, None, None, user_data.profileBannerUrl, user_username+"_profile_banner_picture")
+        user_label = user_data.label
+        if user_label is not None:
+            user_label = user_data.label.description
+        user_twitter_url = user_data.url
+        insert_into_users_table(user_id, user_username, user_display_name, user_description, user_verified, user_account_datetime_created, user_followers_count, user_friends_count, user_status_count, user_favorites_count, user_listed_count, user_media_count, user_location, user_account_protected, user_linked_url, user_profile_picture, user_profile_banner_picture, user_label, user_twitter_url)
         
-        if media_content is None:
-            media_content_blob = None
+def archive_tweet(original_tweet_id=None, new_tweet_id=None, tweet=None):
+    # this utilizes recursion to archive the entire chain of retweets, quoted tweets and replied to tweets
+    
+    # if tweet exists, don't save it again
+    if new_tweet_id is not None:
+        _tmp_tweet_id = new_tweet_id
+    elif tweet is not None:
+        _tmp_tweet_id = tweet.id
+    
+    if check_if_artifact_exists_in_db("tweets", _tmp_tweet_id) is True:
+        return
+    else:
+        if tweet is None:
+            # logging.info("Checking if tweet with id " + str(new_tweet_id) + " exists on Twitter")
+            try:
+                _tmp_tweet = enumerate(sntwitter.TwitterTweetScraper(str(new_tweet_id)).get_items())
+                for _tmp,tweet in _tmp_tweet:
+                    tweet = tweet
+            except Exception as e: 
+                tweet_cannot_be_retrieved_message = "\nTweet could not be retrieved. It's most likely been deleted."
+                # error_handling(tweet_cannot_be_retrieved_message)
+                print(tweet_cannot_be_retrieved_message)
+                return
+
+        # placing these vars first for later parts to function
+        tweet_id = tweet.id 
+        tweet_user_id = tweet.user.id
+        tweet_user_name = tweet.user.username
+        archive_user(tweet.user)
+        # logging.info("Data for tweet with ID " + str(tweet_id) + " has been pulled. Compiling data")
+        # vars listed alphabetically
+        tweet_content = tweet.content
+        tweet_coordinates = tweet.coordinates
+        if tweet_coordinates is not None:
+            tweet_latitude = tweet.coordinates.latitude
+            tweet_longitude = tweet.coordinates.longitude
         else:
-            media_content_blob = convert_to_binary_data(media_content[0])
-            os.remove(media_filename) #a file's not created if the media resource no longer exists
-    
-    quote_count = tweet.quoteCount
-    quoted_tweet = tweet.quotedTweet
-    if quoted_tweet is not None:
-        quoted_tweet_id = (tweet.quotedTweet).id
-        get_tweet(tweet_id, quoted_tweet_id, QUOTED_TWEETS_TABLE_NAME)
-    else:
-        quoted_tweet_id = None
-    rendered_content = tweet.renderedContent
-    replied_to_tweet_id = tweet.inReplyToTweetId
-    if replied_to_tweet_id is not None:
-        get_tweet(tweet_id, replied_to_tweet_id, REPLIED_TO_TWEETS_TABLE_NAME)
-    reply_count = tweet.replyCount
-    retweet_count = tweet.retweetCount
-    retweeted_tweet = tweet.retweetedTweet
-    if retweeted_tweet is not None:
-        retweeted_tweet_id = (tweet.retweetedTweet).id
-        get_tweet(tweet_id, retweeted_tweet_id, RETWEETS_TABLE_NAME)        
-    else:
-        retweeted_tweet_id = None
-    source_label = tweet.sourceLabel
-    source_url = tweet.sourceUrl
-    url = tweet.url
-    user_all_data = tweet.user.json()
-    tweet_all_data = tweet.json()
-    
-    insert_into_main_table(table_name, tweet_id, datetime_created_on, username, rendered_content, conversation_id, like_count, reply_count, retweet_count, quote_count, source_label, source_url, url, user_all_data, tweet_all_data, media_url, media_filename, media_duration, media_views, media_content_blob, quoted_tweet_id, retweeted_tweet_id, replied_to_tweet_id)
-    if table_name is not ORIGINAL_ACCOUNT_TWEETS:
-        insert_into_junction_table(table_name, original_tweet_id, new_tweet_id, username, datetime_created_on)
+            tweet_latitude = None
+            tweet_longitude = None
+        tweet_datetime = str(tweet.date)
+        tweet_conversation_id = tweet.conversationId
+        tweet_hashtags = tweet.hashtags 
+        if tweet_hashtags is not None:
+            _tweet_hashtags = ""
+            for hashtag in tweet_hashtags:
+                _tweet_hashtags += str(hashtag) + ", "
+            tweet_hashtags = _tweet_hashtags.rstrip(', ')
+        tweet_like_count = tweet.likeCount
+        tweet_language = tweet.lang
+        tweet_media_content_blob, tweet_media_filename, tweet_media_duration, tweet_media_views, tweet_media_url,  = get_media(tweet.media, tweet_user_id, tweet_user_name)
+        tweet_mentioned_users = tweet.mentionedUsers 
+        if tweet_mentioned_users is not None:
+            _mentioned_users = ""
+            for user in tweet_mentioned_users:
+                archive_user(user)
+                _mentioned_users += str(user.username) + ", "
+            tweet_mentioned_users = _mentioned_users.rstrip(', ')
+        tweet_place = tweet.place
+        if tweet_place is not None:
+            tweet_place_full_name = tweet_place.fullName
+            tweet_place_name = tweet_place.name
+            tweet_place_type = tweet_place.type
+            tweet_place_country = tweet_place.country
+            tweet_place_country_code = tweet_place.countryCode
+        else:
+            tweet_place_full_name = None
+            tweet_place_name = None
+            tweet_place_type = None
+            tweet_place_country = None
+            tweet_place_country_code = None
+        tweet_quote_count = tweet.quoteCount
+        tweet_quoted_tweet = tweet.quotedTweet
+        if tweet_quoted_tweet is not None:
+            tweet_quoted_tweet_id = (tweet.quotedTweet).id
+            archive_tweet(tweet_id, tweet_quoted_tweet_id)
+        else:
+            tweet_quoted_tweet_id = None
+        tweet_replied_to_tweet_id = tweet.inReplyToTweetId
+        if tweet_replied_to_tweet_id is not None:
+            archive_tweet(tweet_id, tweet_replied_to_tweet_id)
+        tweet_reply_count = tweet.replyCount
+        tweet_retweet_count = tweet.retweetCount
+        tweet_retweeted_tweet = tweet.retweetedTweet
+        if tweet_retweeted_tweet is not None:
+            tweet_retweeted_tweet_id = (tweet.retweetedTweet).id
+            archive_tweet(tweet_id, tweet_retweeted_tweet_id)        
+        else:
+            tweet_retweeted_tweet_id = None
+        tweet_source_app = tweet.sourceLabel
+        tweet_url = tweet.url
+        
+        insert_into_tweets_table(tweet_id, tweet_user_name, tweet_datetime, tweet_content, tweet_media_content_blob, tweet_latitude, tweet_longitude, tweet_conversation_id, tweet_hashtags, tweet_like_count, tweet_language, tweet_media_filename, tweet_media_duration, tweet_media_views, tweet_media_url, tweet_mentioned_users, tweet_place_full_name, tweet_place_name, tweet_place_type, tweet_place_country, tweet_place_country_code, tweet_quote_count, tweet_quoted_tweet_id, tweet_replied_to_tweet_id, tweet_reply_count, tweet_retweet_count, tweet_retweeted_tweet_id, tweet_source_app, tweet_url, tweet_user_id)     
 
 def main():
-    create_tweet_counter()
-    create_exception_counter()
-    initialize_databases()
-    for _tmp,tweet in enumerate(sntwitter.TwitterSearchScraper('''from:%s include:nativeretweets''' %TWITTER_ACCOUNT).get_items()):
-        get_tweet(None, None, ORIGINAL_ACCOUNT_TWEETS, tweet)
+    create_global_vars()
+    initialize_database()
+    for account in TWITTER_ACCOUNTS:
+        for _tmp,tweet in enumerate(sntwitter.TwitterSearchScraper('''from:%s include:nativeretweets''' %account).get_items()):
+            archive_tweet(None, None, tweet)
 
 # -------------------------------
 # --- END OF SCRIPT FUNCTIONS ---
