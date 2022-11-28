@@ -416,6 +416,8 @@ def archive_user(user_data):
         user_profile_picture, _media_duration, _media_views, _media_url, _media_filename = get_media(None, None, None, user_data.profileImageUrl, user_username+"_profile_picture")
         user_profile_banner_picture, _media_duration, _media_views, _media_url, _media_filename = get_media(None, None, None, user_data.profileBannerUrl, user_username+"_profile_banner_picture")
         user_label = user_data.label
+        if user_label is not None:
+            user_label = user_data.label.description
         user_twitter_url = user_data.url
         insert_into_users_table(user_id, user_username, user_display_name, user_description, user_verified, user_account_datetime_created, user_followers_count, user_friends_count, user_status_count, user_favorites_count, user_listed_count, user_media_count, user_location, user_account_protected, user_linked_url, user_profile_picture, user_profile_banner_picture, user_label, user_twitter_url)
         
