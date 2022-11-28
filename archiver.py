@@ -535,6 +535,13 @@ def main():
     for account in TWITTER_ACCOUNTS:
         for _tmp,tweet in enumerate(sntwitter.TwitterSearchScraper('''from:%s include:nativeretweets''' %account).get_items()):
             archive_tweet(None, None, tweet)
+    print(">>> Completed archiving the following accounts:")
+    count = 0
+    print("\n>>> Finished archiving the following accounts:")
+    for account in TWITTER_ACCOUNTS: 
+        count += 1
+        print("{}. {}".format(count, account))
+    print("\n>>> Program has finished running")
 
 # -------------------------------
 # --- END OF SCRIPT FUNCTIONS ---
