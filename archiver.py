@@ -274,12 +274,12 @@ def initialize_database():
 
 def download_media(media_url, filename): 
     try:
-        urllib.request.urlretrieve(media_url, filename) #media is named username_tweet_id.[filetype]
+        downloaded_media = urllib.request.urlretrieve(media_url, filename) #media is named username_tweet_id.[filetype]
     except Exception as e:
         # error_handling(e)
         return None # if the media no longer exists, return None (which results in no file being created locally)
 
-    return urllib.request.urlretrieve(media_url, filename) #media is named username_tweet_id.[filetype]
+    return downloaded_media #media is named username_tweet_id.[filetype]
 
 def convert_to_binary_data(filename):
     # Convert digital data to binary format
@@ -316,7 +316,7 @@ def insert_into_tweets_table(tweet_id, tweet_user_name, tweet_datetime, tweet_co
     # logging.info("Inserting into tweet table:")
     print_inserting_into_db_message("tweets", tweet_id, tweet_user_name, tweet_datetime)
     archive_counter()
-    c.execute("INSERT INTO tweets (tweet_id, tweet_user_name, tweet_datetime, tweet_content, tweet_media_content_blob, tweet_latitude, tweet_longitude, tweet_conversation_id, tweet_hashtags, tweet_like_count, tweet_language, tweet_media_filename, tweet_media_duration, tweet_media_views, tweet_media_url, tweet_mentioned_users, tweet_place_full_name, tweet_place_name, tweet_place_type, tweet_place_country, tweet_place_country_code, tweet_quote_count, tweet_quoted_tweet_id, tweet_replied_to_tweet_id, tweet_reply_count, tweet_retweet_count, tweet_retweeted_tweet_id, tweet_source_app, tweet_url, tweet_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (tweet_id, tweet_user_name, tweet_datetime, tweet_content, tweet_media_content_blob, tweet_latitude, tweet_longitude, tweet_conversation_id, tweet_hashtags, tweet_like_count, tweet_language, tweet_media_filename, tweet_media_duration, tweet_media_views, tweet_media_url, tweet_mentioned_users, tweet_place_full_name, tweet_place_name, tweet_place_type, tweet_place_country, tweet_place_country_code, tweet_quote_count, tweet_quoted_tweet_id, tweet_replied_to_tweet_id, tweet_reply_count, tweet_retweet_count, tweet_retweeted_tweet_id, tweet_source_app, tweet_url, tweet_user_id))
+    c.execute("INSERT OR IGNORE INTO tweets (tweet_id, tweet_user_name, tweet_datetime, tweet_content, tweet_media_content_blob, tweet_latitude, tweet_longitude, tweet_conversation_id, tweet_hashtags, tweet_like_count, tweet_language, tweet_media_filename, tweet_media_duration, tweet_media_views, tweet_media_url, tweet_mentioned_users, tweet_place_full_name, tweet_place_name, tweet_place_type, tweet_place_country, tweet_place_country_code, tweet_quote_count, tweet_quoted_tweet_id, tweet_replied_to_tweet_id, tweet_reply_count, tweet_retweet_count, tweet_retweeted_tweet_id, tweet_source_app, tweet_url, tweet_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", (tweet_id, tweet_user_name, tweet_datetime, tweet_content, tweet_media_content_blob, tweet_latitude, tweet_longitude, tweet_conversation_id, tweet_hashtags, tweet_like_count, tweet_language, tweet_media_filename, tweet_media_duration, tweet_media_views, tweet_media_url, tweet_mentioned_users, tweet_place_full_name, tweet_place_name, tweet_place_type, tweet_place_country, tweet_place_country_code, tweet_quote_count, tweet_quoted_tweet_id, tweet_replied_to_tweet_id, tweet_reply_count, tweet_retweet_count, tweet_retweeted_tweet_id, tweet_source_app, tweet_url, tweet_user_id))
     conn.commit()    
     return
 
