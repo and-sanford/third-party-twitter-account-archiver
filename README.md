@@ -5,7 +5,7 @@ This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape
 * Tweets or user accounts that have been/are deleted, suspended or private cannot be saved
 * Twitter may rate limit or block your IP, though I have not experienced this
 
-# Installation Steps (archiver.py)
+# Installation Steps
 1. Install the Python module for snscrape. 
      - As of the time of writing, this can be done via `pip3 install snscrape`
      - Check [snscrape's repo](https://github.com/JustAnotherArchivist/snscrape) for current instructions
