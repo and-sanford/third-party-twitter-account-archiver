@@ -2,15 +2,15 @@
 This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape) to archive all tweets from an individual Twitter user's accounts to a local [SQLite](https://www.sqlite.org/index.html) DB. [snscrape](https://github.com/JustAnotherArchivist/snscrape) easily bypasses Twitter's 3200 tweet limit, with no dev account or API keys required. I've tried several tools, and snscrape's the first one to fully work - a big thanks to its maintainers!
 
 **Limitations**
-* Tweets or user accounts that have been deleted will not be saved
-* Twitter may rate limit or block your IP, though I have not yet experienced this
+* Tweets or user accounts that have been/are deleted, suspended or private cannot be saved
+* Twitter may rate limit or block your IP, though I have not experienced this
 
 # Installation Steps (archiver.py)
 1. Install the Python module for snscrape. 
      - As of the time of writing, this can be done via `pip3 install snscrape`
      - Check [snscrape's repo](https://github.com/JustAnotherArchivist/snscrape) for current instructions
 2. Download `archiver.py`
-3. Add the account(s) you want to archive to the `TWITTER_ACCOUNTS = []` list
+3. Add the account(s) you want to archive to the `TWITTER_ACCOUNTS = ["example1", "example2", "example3"]` list
 4. (Optional) If you do **not** want to save retweets, remove `include:nativeretweets`
 5. (Optional) You may want to run this script via VPN or proxy 
 6. (Optional) When finished, compress the database
