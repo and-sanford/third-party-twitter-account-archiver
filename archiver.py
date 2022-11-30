@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import datetime
 import logging
 import os
@@ -72,7 +73,16 @@ START_TIME = datetime.datetime.now()
 
 #twitter account to search
 # Change this value. e.g., TWITTER_ACCOUNTS = ["jack"]
-TWITTER_ACCOUNTS = ["example1", "example2"] 
+TWITTER_ACCOUNTS = ["example1", "example2", "example3"]
+
+# ADVANCED SEARCH TERMS
+# Advanced search terms can be utilized (see example below). See this guide for search terms: https://github.com/igorbrigadir/twitter-advanced-search/blob/master/README.md 
+# #
+# The next few lines are an example of the code to search for an account between specific dates: 
+# UNTIL_DATE = "YYYY-MM-DD"
+# SINCE_DATE = "YYYY-MM-DD"
+# enumerate(sntwitter.TwitterSearchScraper('''(from:%s) until:%s since:%s include:nativeretweets'''%(account, UNTIL_DATE, SINCE_DATE)).get_items()):
+
 
 #table names
 TWEETS_TABLE_NAME = "tweets" 
@@ -535,7 +545,7 @@ def main():
     for account in TWITTER_ACCOUNTS:
         for _tmp,tweet in enumerate(sntwitter.TwitterSearchScraper('''from:%s include:nativeretweets''' %account).get_items()):
             archive_tweet(None, None, tweet)
-    print(">>> Completed archiving the following accounts:")
+        print("\n>>> Completed archiving the following account: {}".format(account))
     count = 0
     print("\n>>> Finished archiving the following accounts:")
     for account in TWITTER_ACCOUNTS: 
