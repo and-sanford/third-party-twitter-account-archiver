@@ -11,9 +11,12 @@ This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape
      - Check [snscrape's repo](https://github.com/JustAnotherArchivist/snscrape) for current instructions
 2. Download `archiver.py`
 3. Add the account(s) you want to archive to the `TWITTER_ACCOUNTS = ["example1", "example2", "example3"]` list
-4. (Optional) If you do **not** want to save retweets, remove `include:nativeretweets`
-5. (Optional) You may want to run this script via VPN or proxy 
-6. (Optional) When finished, compress the database
+
+**Optional Steps**
+1. If you do **not** want to save retweets, remove `include:nativeretweets`
+2. Utilize other advanced search queries (documentation on how to do this is in the code, beneath the `TWITTER_ACCOUNTS` var declaration)
+3. You may want to run this script via VPN or proxy 
+4. When finished, compress the database
 
 # Areas for Improvement
 I don't have any major plans to improve this; however, create an issue or PR if you think a function should be added, code refractored, etc. 
