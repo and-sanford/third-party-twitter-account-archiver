@@ -8,7 +8,7 @@ import urllib.request
 
 ''' 
 --- OVERVIEW --- 
-This program uses snscrape to archive all publicly available tweets from a list of Twitter users (or, with some minor modifications, results from and (advanced) Twitter search), along with: 
+This program uses snscrape to archive all publicly available tweets from a list of Twitter users (or, with some minor modifications, results from (advanced) Twitter searches), along with: 
 *Entire chains of retweets, quoted tweets replied to tweets 
 *Media (videos, photos, etc.)
 
