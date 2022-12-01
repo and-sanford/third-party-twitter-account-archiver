@@ -1,5 +1,9 @@
 # Twitter Archiver for Third-party Accounts
-This script utilizes [snscrape](https://github.com/JustAnotherArchivist/snscrape) to archive all tweets from an individual Twitter user's accounts to a local [SQLite](https://www.sqlite.org/index.html) DB. [snscrape](https://github.com/JustAnotherArchivist/snscrape) easily bypasses Twitter's 3200 tweet limit, with no dev account or API keys required. I've tried several tools, and snscrape's the first one to fully work - a big thanks to its maintainers!
+This program uses [snscrape](https://github.com/JustAnotherArchivist/snscrape) to archive all publicly available tweets from a list of Twitter users (or, with some minor modifications, results from (advanced) Twitter searches) to a local [SQLite](https://www.sqlite.org/index.html) DB, along with: 
+*Entire chains of retweets, quoted tweets replied to tweets 
+*Media (videos, photos, etc.)
+
+[snscrape](https://github.com/JustAnotherArchivist/snscrape) easily bypasses Twitter's 3200 tweet limit, with no dev account or API keys required. I've tried several tools, and snscrape's the first one to fully work - a big thanks to its maintainers!
 
 **Limitations**
 * Tweets or user accounts that have been/are deleted, suspended or private cannot be saved
