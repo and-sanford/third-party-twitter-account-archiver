@@ -6,9 +6,9 @@ import snscrape.modules.twitter as sntwitter
 import sqlite3 
 import urllib.request
 
-''' INTRODUCTION
+''' 
 --- OVERVIEW --- 
-This program uses snscrape to archive all publicly available tweets from a list of Twitter useusersr, along with: 
+This program uses snscrape to archive all publicly available tweets from a list of Twitter users (or, with some minor modifications, results from and (advanced) Twitter search), along with: 
 *Entire chains of retweets, quoted tweets replied to tweets 
 *Media (videos, photos, etc.)
 
