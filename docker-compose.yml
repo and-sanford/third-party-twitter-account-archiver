@@ -1,0 +1,10 @@
+services:
+  archiver:
+    image: python:3
+    build:
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/archive
+    environment:
+      - TWITTER_DB_FILE=/archive/tweets_archive.db
+      - TWITTER_USERS=jack,github

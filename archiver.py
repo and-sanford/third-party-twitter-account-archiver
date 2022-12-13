@@ -73,7 +73,7 @@ START_TIME = datetime.datetime.now()
 
 #twitter account to search
 # Change this value. e.g., TWITTER_ACCOUNTS = ["jack"]
-TWITTER_ACCOUNTS = ["example1", "example2", "example3"]
+TWITTER_ACCOUNTS = os.environ.get("TWITTER_ACCOUNTS", "jack").split(",")
 
 # ADVANCED SEARCH TERMS
 # Advanced search terms can be utilized (see example below). See this guide for search terms: https://github.com/igorbrigadir/twitter-advanced-search/blob/master/README.md 
@@ -89,8 +89,9 @@ TWEETS_TABLE_NAME = "tweets"
 USERS_TABLE_NAME = "users"
 
 # Connecting/creating database. The DB file will be saved to the directory you're running this script in
-print("Connecting to database")
-conn = sqlite3.connect("tweets_archive.db") 
+DB_FILE=os.path.expanduser(os.environ.get("TWITTER_DB_FILE", "tweets_archive.db"))
+print(f"Connecting to database:  {DB_FILE}")
+conn = sqlite3.connect(DB_FILE) 
 c = conn.cursor()
 # --                       --
 # - End of Global Variables -
