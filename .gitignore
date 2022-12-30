@@ -1,2 +1,7 @@
-.github
+.vscode
+cli/logs/*
+cli/archives/*
+!cli/logs/.gitkeep
+!cli/archives/.gitkeep
+TODO.txt
 tweets_archive.db

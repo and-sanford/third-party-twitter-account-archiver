@@ -10,11 +10,10 @@ This program uses [snscrape](https://github.com/JustAnotherArchivist/snscrape) t
 * Twitter may rate limit or block your IP, though I have not experienced this
 
 # Installation Steps
-1. Install the Python module for snscrape. 
-     - As of the time of writing, this can be done via `pip3 install snscrape`
-     - Check [snscrape's repo](https://github.com/JustAnotherArchivist/snscrape) for current instructions
-2. Download `archiver.py`
-3. Add the account(s) you want to archive to the `TWITTER_ACCOUNTS = ["example1", "example2", "example3"]` list
+1. Run either in Docker or via the CLI
+2. Add the account(s) to be archived in the following folderss:
+     - Docker: Update `docker-compose.yml` -> TWITTER_USERS
+     - CLI: Update `modules/settings.py` -> TWITTER_ACCOUNTS
 
 **Optional Steps**
 1. If you do **not** want to save retweets, remove `include:nativeretweets`

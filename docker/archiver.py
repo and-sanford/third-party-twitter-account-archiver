@@ -3,7 +3,7 @@ import datetime
 import logging
 import os
 import snscrape.modules.twitter as sntwitter
-import sqlite3 
+import sqlite3
 import urllib.request
 
 ''' 
