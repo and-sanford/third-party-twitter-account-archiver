@@ -60,23 +60,12 @@ def init():
     SKIPPED_ITEMS_COUNT = 0
     START_TIME = get_datetime()
     TOTAL_ITEMS_ARCHIVED = 0
-    # TWITTER_ACCOUNTS = ["example1", "example2"]
-    TWITTER_ACCOUNTS = ["sarahkendzior",
-                        "wartranslated",
-                        "andreachalupa",
-                        "ContextFall",
-                        "KyivIndependent",
-                        "JuliaDavisNews",
-                        "gaslitnation",
-                        "DarthPutinKGB",
-                        "DefMon3",
-                        "benfranklin2018",
-                        ]
+    TWITTER_ACCOUNTS = ["example1", "example2"]
 
 
 cwd = os.getcwd()
-LOG_FILENAME = cwd + "/logs/" + get_datetime(save_file=True) + ".log"  # noqa
-DATABASE_NAME = cwd + "/archives/twitter_archive.db"  # noqa
+LOG_FILENAME = "cli/logs/" + get_datetime(save_file=True) + ".log"
+DATABASE_NAME = cwd + "/archives/twitter_archive.db"
 
 
 def archive_counter():
@@ -216,63 +205,74 @@ def extract_from_record(_, __, event_dict):
     return event_dict
 
 
-logging.config.dictConfig({
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            "plain": {
-                "()": structlog.stdlib.ProcessorFormatter,
-                "processors": [
-                    structlog.stdlib.filter_by_level,
-                    structlog.stdlib.add_logger_name,
-                    structlog.stdlib.add_log_level,
-                    structlog.stdlib.PositionalArgumentsFormatter(),
-                    structlog.processors.TimeStamper(fmt="iso"),
-                    structlog.processors.StackInfoRenderer(),
-                    structlog.processors.format_exc_info,
-                    structlog.processors.UnicodeDecoder(),
-                    structlog.processors.CallsiteParameterAdder(
-                        {
-                            structlog.processors.CallsiteParameter.FILENAME,
-                            structlog.processors.CallsiteParameter.FUNC_NAME,
-                            structlog.processors.CallsiteParameter.LINENO,
-                        }
-                    ),
-                    structlog.processors.JSONRenderer()
-                ],
-                "foreign_pre_chain": pre_chain,
+def set_log_dictconfig(filename):
+    logging.config.dictConfig({
+            "version": 1,
+            "disable_existing_loggers": False,
+            "formatters": {
+                "plain": {
+                    "()": structlog.stdlib.ProcessorFormatter,
+                    "processors": [
+                        structlog.stdlib.filter_by_level,
+                        structlog.stdlib.add_logger_name,
+                        structlog.stdlib.add_log_level,
+                        structlog.stdlib.PositionalArgumentsFormatter(),
+                        structlog.processors.TimeStamper(fmt="iso"),
+                        structlog.processors.StackInfoRenderer(),
+                        structlog.processors.format_exc_info,
+                        structlog.processors.UnicodeDecoder(),
+                        structlog.processors.CallsiteParameterAdder(
+                            {
+                                structlog.processors.CallsiteParameter.FILENAME,  # noqa
+                                structlog.processors.CallsiteParameter.FUNC_NAME,  # noqa
+                                structlog.processors.CallsiteParameter.LINENO,
+                            }
+                        ),
+                        structlog.processors.JSONRenderer()
+                    ],
+                    "foreign_pre_chain": pre_chain,
+                },
+                "colored": {
+                    "()": structlog.stdlib.ProcessorFormatter,
+                    "processors": [
+                        extract_from_record,
+                        structlog.stdlib.ProcessorFormatter.remove_processors_meta,  # noqa
+                        structlog.dev.ConsoleRenderer(colors=True),
+                    ],
+                    "foreign_pre_chain": pre_chain,
+                },
             },
-            "colored": {
-                "()": structlog.stdlib.ProcessorFormatter,
-                "processors": [
-                   extract_from_record,
-                   structlog.stdlib.ProcessorFormatter.remove_processors_meta,
-                   structlog.dev.ConsoleRenderer(colors=True),
-                ],
-                "foreign_pre_chain": pre_chain,
+            "handlers": {
+                "default": {
+                    "level": "ERROR",
+                    "class": "logging.StreamHandler",
+                    "formatter": "colored",
+                },
+                "file": {
+                    "level": "DEBUG",
+                    "class": "logging.handlers.WatchedFileHandler",
+                    "filename": filename,
+                    "formatter": "plain",
+                },
             },
-        },
-        "handlers": {
-            "default": {
-                "level": "ERROR",
-                "class": "logging.StreamHandler",
-                "formatter": "colored",
-            },
-            "file": {
-                "level": "DEBUG",
-                "class": "logging.handlers.WatchedFileHandler",
-                "filename": LOG_FILENAME,
-                "formatter": "plain",
-            },
-        },
-        "loggers": {
-            __name__: {
-                "handlers": ["default", "file"],
-                "level": "DEBUG",
-                "propagate": False,
-            },
-        }
-})
+            "loggers": {
+                __name__: {
+                    "handlers": ["default", "file"],
+                    "level": "DEBUG",
+                    "propagate": False,
+                },
+            }
+    })
+
+
+try:
+    filename = LOG_FILENAME
+    set_log_dictconfig(filename)
+except ValueError:
+    filename = cwd + "/logs/" + get_datetime(save_file=True) + ".log"
+    set_log_dictconfig(filename)
+
+
 structlog.configure(
     processors=[
         structlog.stdlib.add_log_level,
