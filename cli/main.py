@@ -19,6 +19,8 @@ def main():
                                     from:{account}
                                     include:nativeretweets
                                     ''').get_items()):
+            settings.PARENT_ACCOUNT = account
+            settings.PARENT_TWEET = tweet.id
             ArchivedTweet(tweet)
 
 

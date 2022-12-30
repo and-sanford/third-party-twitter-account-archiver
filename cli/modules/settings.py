@@ -45,6 +45,8 @@ def init():
     logger.debug("Creating global variables")
 
     global ARCHIVED_ITEMS_COUNT
+    global PARENT_ACCOUNT
+    global PARENT_TWEET
     global DATABASE_NAME
     global LOG_FILENAME
     global SKIPPED_ITEMS_COUNT
@@ -53,10 +55,23 @@ def init():
     global TWITTER_ACCOUNTS
 
     ARCHIVED_ITEMS_COUNT = 0
+    PARENT_ACCOUNT = ""
+    PARENT_TWEET = 0
     SKIPPED_ITEMS_COUNT = 0
     START_TIME = get_datetime()
     TOTAL_ITEMS_ARCHIVED = 0
-    TWITTER_ACCOUNTS = ["example1", "example2"]
+    # TWITTER_ACCOUNTS = ["example1", "example2"]
+    TWITTER_ACCOUNTS = ["sarahkendzior",
+                        "wartranslated",
+                        "andreachalupa",
+                        "ContextFall",
+                        "KyivIndependent",
+                        "JuliaDavisNews",
+                        "gaslitnation",
+                        "DarthPutinKGB",
+                        "DefMon3",
+                        "benfranklin2018",
+                        ]
 
 
 cwd = os.getcwd()
@@ -158,6 +173,9 @@ def print_stats(table_name, saved_obj):
     db_size = str(f"{round(os.path.getsize(DATABASE_NAME)/1024/1024, 1)} MB")
 
     table = [
+        ["Parent Account", str(f"@{PARENT_ACCOUNT}")],
+        ["Parent Tweet", str(PARENT_TWEET)],
+        ["", ""],
         ["Current Time", now],
         ["Elapsed Time", elapsed_time],
         ["Table", table_name],
