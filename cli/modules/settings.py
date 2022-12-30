@@ -173,11 +173,11 @@ def print_stats(table_name, saved_obj):
     db_size = str(f"{round(os.path.getsize(DATABASE_NAME)/1024/1024, 1)} MB")
 
     table = [
+        ["Current Time", now],
+        ["Elapsed Time", elapsed_time],
         ["Parent Account", str(f"@{PARENT_ACCOUNT}")],
         ["Parent Tweet", str(PARENT_TWEET)],
         ["", ""],
-        ["Current Time", now],
-        ["Elapsed Time", elapsed_time],
         ["Table", table_name],
         ["ID (truncated)", saved_obj_id],
         ["User", str(f"@{username}")],
@@ -193,7 +193,7 @@ def print_stats(table_name, saved_obj):
     headers = ["Stat", "Value"]
     tabulate.PRESERVE_WHITESPACE = True
     print(tabulate.tabulate(table, headers, tablefmt="pretty", numalign="left", stralign="left", maxcolwidths=30))  # noqa
-    print("\n")
+    # print("\n")
 
 
 timestamper = structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S")
