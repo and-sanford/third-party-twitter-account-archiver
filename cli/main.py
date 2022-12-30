@@ -21,6 +21,7 @@ def main():
                                     ''').get_items()):
             settings.PARENT_ACCOUNT = account
             settings.PARENT_TWEET = tweet.id
+            settings.PARENT_TIME = settings.get_datetime(dt=tweet.date)
             ArchivedTweet(tweet)
 
 

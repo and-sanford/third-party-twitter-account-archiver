@@ -47,6 +47,7 @@ def init():
     global ARCHIVED_ITEMS_COUNT
     global PARENT_ACCOUNT
     global PARENT_TWEET
+    global PARENT_TIME
     global DATABASE_NAME
     global LOG_FILENAME
     global SKIPPED_ITEMS_COUNT
@@ -57,6 +58,7 @@ def init():
     ARCHIVED_ITEMS_COUNT = 0
     PARENT_ACCOUNT = ""
     PARENT_TWEET = 0
+    PARENT_TIME = datetime
     SKIPPED_ITEMS_COUNT = 0
     START_TIME = get_datetime()
     TOTAL_ITEMS_ARCHIVED = 0
@@ -142,7 +144,6 @@ def print_stats(table_name, saved_obj):
         database, the saved_obj will be an ArchivedTweet)
     """
     elapsed_time, saves_per_second, attempted_saves_per_second = get_stats()
-    now = get_datetime(string_conversion=True)
     if table_name == "tweets" or table_name == "users":
         username = saved_obj.username
         creation_datetime = saved_obj.creation_datetime
@@ -162,20 +163,20 @@ def print_stats(table_name, saved_obj):
     db_size = str(f"{round(os.path.getsize(DATABASE_NAME)/1024/1024, 1)} MB")
 
     table = [
-        ["Current Time", now],
         ["Elapsed Time", elapsed_time],
         ["Parent Account", str(f"@{PARENT_ACCOUNT}")],
-        ["Parent Tweet", str(PARENT_TWEET)],
+        ["Parent Tweet - ID", str(PARENT_TWEET)],
+        ["Parent Tweet - Time", PARENT_TIME],
         ["", ""],
         ["Table", table_name],
-        ["ID (truncated)", saved_obj_id],
+        [f"ID (truncated to {col_width})", saved_obj_id],
         ["User", str(f"@{username}")],
         ["Creation Date", creation_datetime],
         ["", ""],
         ["Saves/sec", saves_per_second],
         ["Attempted saves/sec", attempted_saves_per_second],
         ["Archived", ARCHIVED_ITEMS_COUNT],
-        ["Previously archived", SKIPPED_ITEMS_COUNT],
+        ["Previously Archived", SKIPPED_ITEMS_COUNT],
         ["Total Items Archived", TOTAL_ITEMS_ARCHIVED],
         ["DB Size", db_size]
     ]
