@@ -59,8 +59,9 @@ def init():
     TWITTER_ACCOUNTS = ["example1", "example2"]
 
 
-LOG_FILENAME = "cli/logs/" + get_datetime(save_file=True) + ".log"  # noqa
-DATABASE_NAME = "cli/archives/twitter_archive_" + get_datetime(save_file=True) + ".db"  # noqa
+cwd = os.getcwd()
+LOG_FILENAME = cwd + "/logs/" + get_datetime(save_file=True) + ".log"  # noqa
+DATABASE_NAME = cwd + "/archives/twitter_archive.db"  # noqa
 
 
 def archive_counter():

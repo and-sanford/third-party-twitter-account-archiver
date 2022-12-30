@@ -16,7 +16,8 @@ def main():
     logger.info(f"Starting to archive the following accounts {settings.TWITTER_ACCOUNTS}")  # noqa
     for account in settings.TWITTER_ACCOUNTS:
         for _tmp, tweet in enumerate(sntwitter.TwitterSearchScraper(f'''
-                                    from:{account} include:nativeretweets
+                                    from:{account}
+                                    include:nativeretweets
                                     ''').get_items()):
             ArchivedTweet(tweet)
 

@@ -2,6 +2,7 @@ __pycache__
 .vscode
 cli/logs/*
 cli/archives/*
+modules/__pycache__/*
 !cli/logs/.gitkeep
 !cli/archives/.gitkeep
 TODO.txt
