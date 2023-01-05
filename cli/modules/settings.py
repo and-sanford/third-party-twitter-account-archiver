@@ -160,7 +160,11 @@ def print_stats(table_name, saved_obj):
     col_width = 19
     saved_obj_id = str(saved_obj.id)[:col_width]
 
-    db_size = str(f"{round(os.path.getsize(DATABASE_NAME)/1024/1024, 1)} MB")
+    db_size_mb = os.path.getsize(DATABASE_NAME)/1000/1000
+    if db_size_mb > 1000:
+        db_size = f"{str(round((db_size_mb/1000), 3))} GB"
+    else:
+        db_size = f"{str(round(db_size_mb, 2))} MB"
 
     table = [
         ["Elapsed Time", elapsed_time],
