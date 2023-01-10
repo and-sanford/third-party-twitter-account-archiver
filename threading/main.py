@@ -21,7 +21,7 @@ start_time = datetime.now()
 meta = MetaData()
 Base = declarative_base()
 cwd = os.getcwd()
-db_name = (cwd + "/threading/archives/twitter_archive.db")+'?check_same_thread=False'  # noqa
+db_name = (cwd + "/archives/twitter_archive.db")+'?check_same_thread=False'  # noqa
 engine = create_engine(f"sqlite:///{db_name}",
                        echo=False,
                        future=True,
@@ -112,7 +112,9 @@ class MediaUsersTable(Base):
     user_id = Column("user_id", ForeignKey("users.id"), primary_key=True)
 
 
-TWITTER_ACCOUNTS = ["example1", "example2"]
+TWITTER_ACCOUNTS = ["example1",
+                    "example2",
+                    ]
 
 
 class Counter:
@@ -127,6 +129,19 @@ class Counter:
         return next(self._incs) - next(self._accesses)
 
 
+class CounterExists:
+    def __init__(self):
+        self._incs = itertools.count()
+        self._accesses = itertools.count()
+
+    def increment(self):
+        next(self._incs)
+
+    def value(self):
+        return next(self._incs) - next(self._accesses)
+
+
+global_exists_counter = CounterExists()
 my_global_counter = Counter()
 
 
@@ -190,7 +205,8 @@ def save_media(media, tweet_or_user_id: int, username: str, url: str):  # noqa
     try:
         content_blob = (urllib.request.urlopen(url)).read()
     except Exception as e:
-        logger.error(e)
+        # logger.error(e)
+        pass
     if content_blob is not None:
         id = sha512(content_blob).hexdigest()
         try:
@@ -212,13 +228,18 @@ def save_media(media, tweet_or_user_id: int, username: str, url: str):  # noqa
                         user=tweet_or_user_id,
                     )])
         except Exception as e:
-            logger.error(e)
+            # logger.error(e)
+            thread_session.close()
+            return
 
         try:
             thread_session.commit()
         except Exception as e:
             if "UNIQUE constraint" not in e:
-                logger.error(e)
+                # logger.error(e)
+                global_exists_counter.increment()
+                thread_session.close()
+                return
         # logger.debug(f"Saved Media ID: {id}")
         my_global_counter.increment()
     thread_session.close()
@@ -231,6 +252,7 @@ def save_user(user):
         exists = thread_session.query(UserTable).filter(UserTable.id == user.id)  # noqa
         exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
         if exists is True:
+            global_exists_counter.increment()
             thread_session.close()
             return
 
@@ -275,13 +297,18 @@ def save_user(user):
                 verified=user.verified,
             )])
         except Exception as e:
-            logger.error(e)
+            # logger.error(e)
+            thread_session.close()
+            return
 
         try:
             thread_session.commit()
         except Exception as e:
             if "UNIQUE constraint" not in e:
-                logger.error(e)
+                # logger.error(e)
+                global_exists_counter.increment()
+                thread_session.close()
+                return
         # logger.debug(f"Saved Username: {user.username}")
         my_global_counter.increment()
         thread_session.close()
@@ -316,6 +343,7 @@ def save_tweet(tweet, referrer_tweet_id=None):
         exists = thread_session.query(TweetTable).filter(TweetTable.id == tweet.id)  # noqa
         exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
         if exists is True:
+            global_exists_counter.increment()
             thread_session.close()
             return
 
@@ -409,7 +437,7 @@ def save_tweet(tweet, referrer_tweet_id=None):
                 username=tweet.user.username,
             )])
         except Exception as e:
-            logger.error(e)
+            # logger.error(e)
             thread_session.close()
             return
 
@@ -417,7 +445,8 @@ def save_tweet(tweet, referrer_tweet_id=None):
             thread_session.commit()
         except Exception as e:
             if "UNIQUE constraint" not in e:
-                logger.error(e)
+                # logger.error(e)
+                global_exists_counter.increment()
                 thread_session.close()
                 return
 
@@ -432,21 +461,30 @@ def archive_accounts(account):
         for _tmp, tweet in enumerate(sntwitter.TwitterSearchScraper(f'''
                                         from:{account}
                                         include:nativeretweets
-                                        since:2022-01-05
                                         ''').get_items()):
             jobs.append(ex.submit(save_tweet, tweet))
             elapsed_time = datetime.now() - start_time
+            et_float = elapsed_time.total_seconds()
+            saves_sec = round((my_global_counter.value() / et_float), 1)
+            skips_sec = round((global_exists_counter.value() / et_float), 1)
+            ops_sec = round(((my_global_counter.value() + global_exists_counter.value()) / et_float), 1)  # noqa
 
             table = [
-                    [elapsed_time, my_global_counter.value()],
+                    ["Current Time", datetime.now()],  # noqa
+                    ["Elapsed Time", elapsed_time],
                     ["", ""],
+                    ["Current Account", f"@{account}"],
+                    ["Archived Items", "{:,}".format(my_global_counter.value())],
+                    ["Skipped Items", "{:,}".format(global_exists_counter.value())],
                     ["", ""],
-                    ["", ""],
+                    ["Saves/sec", saves_sec],
+                    ["Skips/sec", skips_sec],
+                    ["Ops/sec", ops_sec],
                     ]
-            headers = ["Elapsed Time", "Archived Items"]
+            headers = ["Value", "Stats",]  # noqa
             tabulate.PRESERVE_WHITESPACE = True
             print(tabulate.tabulate(table, headers, tablefmt="pretty", numalign="left", stralign="left", maxcolwidths=30))  # noqa
-
+            print("\n")
 
 # logger.debug("Initializing database")
 Base.metadata.create_all(engine, checkfirst=True)
@@ -456,3 +494,9 @@ with ThreadPoolExecutor() as executor:
         executor.submit(archive_accounts, TWITTER_ACCOUNTS[index])
 
 db_session.close()
+elapsed_time = datetime.now() - start_time
+et_float = elapsed_time.total_seconds()
+saves_sec = round((my_global_counter.value() / et_float), 1)
+ops_sec = round(((my_global_counter.value() + global_exists_counter.value()) / et_float), 1)  # noqa
+
+logger.info(f"Finished program in {elapsed_time}\n\tItems Archived:\t{my_global_counter.value()}\nAvg saves/sec:\t{saves_sec}\nAvg ops/sec:\t{ops_sec}")  # noqa
