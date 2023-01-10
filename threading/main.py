@@ -6,6 +6,7 @@ import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 from hashlib import sha512
+from itertools import zip_longest
 
 import snscrape.modules.twitter as sntwitter
 import tabulate
@@ -30,6 +31,11 @@ engine = create_engine(f"sqlite:///{db_name}",
 db_session = scoped_session(sessionmaker(autocommit=False,
                                          autoflush=False,
                                          bind=engine))
+
+
+def grouper(iterable, n, fillvalue=None):
+    args = [iter(iterable)] * n
+    return zip_longest(*args, fillvalue=fillvalue)
 
 
 class TweetTable(Base):
@@ -486,17 +492,23 @@ def archive_accounts(account):
             print(tabulate.tabulate(table, headers, tablefmt="pretty", numalign="left", stralign="left", maxcolwidths=30))  # noqa
             print("\n")
 
-# logger.debug("Initializing database")
-Base.metadata.create_all(engine, checkfirst=True)
-tl = len(TWITTER_ACCOUNTS)
-with ThreadPoolExecutor() as executor:
-    for index in range(tl):
-        executor.submit(archive_accounts, TWITTER_ACCOUNTS[index])
 
-db_session.close()
-elapsed_time = datetime.now() - start_time
-et_float = elapsed_time.total_seconds()
-saves_sec = round((my_global_counter.value() / et_float), 1)
-ops_sec = round(((my_global_counter.value() + global_exists_counter.value()) / et_float), 1)  # noqa
+def main():
+    # logger.debug("Initializing database")
+    Base.metadata.create_all(engine, checkfirst=True)
+    for chunk in grouper(TWITTER_ACCOUNTS, 3):
+        with ThreadPoolExecutor() as executor:
+            for account in chunk:
+                executor.submit(archive_accounts, account)
 
-logger.info(f"Finished program in {elapsed_time}\n\tItems Archived:\t{my_global_counter.value()}\nAvg saves/sec:\t{saves_sec}\nAvg ops/sec:\t{ops_sec}")  # noqa
+    db_session.close()
+    elapsed_time = datetime.now() - start_time
+    et_float = elapsed_time.total_seconds()
+    saves_sec = round((my_global_counter.value() / et_float), 1)
+    ops_sec = round(((my_global_counter.value() + global_exists_counter.value()) / et_float), 1)  # noqa
+
+    logger.info(f"Finished program in {elapsed_time}\n\tItems Archived:\t{my_global_counter.value()}\nAvg saves/sec:\t{saves_sec}\nAvg ops/sec:\t{ops_sec}")  # noqa
+
+
+if __name__ == '__main__':
+    main()
