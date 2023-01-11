@@ -67,7 +67,7 @@ def init():
 
 cwd = os.getcwd()
 LOG_FILENAME = "cli/logs/" + get_datetime(save_file=True) + ".log"
-DATABASE_NAME = cwd + "/archives/twitter_archive.db"
+DATABASE_NAME = cwd + "/cli/archives/twitter_archive.db"
 
 
 def archive_counter():

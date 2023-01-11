@@ -544,7 +544,7 @@ def main():
     create_global_vars()
     initialize_database()
     for account in TWITTER_ACCOUNTS:
-        for _tmp,tweet in enumerate(sntwitter.TwitterSearchScraper('''from:%s include:nativeretweets''' %account).get_items()):
+        for _tmp,tweet in enumerate(sntwitter.TwitterSearchScraper(f'''from:{account} include:nativeretweets''', top=True).get_items()):
             archive_tweet(None, None, tweet)
         print("\n>>> Completed archiving the following account: {}".format(account))
     count = 0

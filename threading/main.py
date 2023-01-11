@@ -467,7 +467,7 @@ def archive_accounts(account):
         for _tmp, tweet in enumerate(sntwitter.TwitterSearchScraper(f'''
                                         from:{account}
                                         include:nativeretweets
-                                        ''').get_items()):
+                                        ''', top=True).get_items()):
             jobs.append(ex.submit(save_tweet, tweet))
             elapsed_time = datetime.now() - start_time
             et_float = elapsed_time.total_seconds()
