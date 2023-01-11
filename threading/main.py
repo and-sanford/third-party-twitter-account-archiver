@@ -210,7 +210,7 @@ def save_media(media, tweet_or_user_id: int, username: str, url: str):  # noqa
     # logger.debug(f"Downloading media at {url}")
     try:
         content_blob = (urllib.request.urlopen(url)).read()
-    except Exception as e:
+    except Exception as e:  # noqa
         # logger.error(e)
         pass
     if content_blob is not None:
@@ -233,7 +233,7 @@ def save_media(media, tweet_or_user_id: int, username: str, url: str):  # noqa
                         media_id=id,
                         user=tweet_or_user_id,
                     )])
-        except Exception as e:
+        except Exception as e:  # noqa
             # logger.error(e)
             thread_session.close()
             return
@@ -252,72 +252,62 @@ def save_media(media, tweet_or_user_id: int, username: str, url: str):  # noqa
 
 
 def save_user(user):
-    with ThreadPoolExecutor() as ex:
-        jobs = []
-        thread_session = db_session()
-        exists = thread_session.query(UserTable).filter(UserTable.id == user.id)  # noqa
-        exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
-        if exists is True:
+    thread_session = db_session()
+    exists = thread_session.query(UserTable).filter(UserTable.id == user.id)  # noqa
+    exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
+    if exists is True:
+        global_exists_counter.increment()
+        thread_session.close()
+        return
+
+    lbl = None
+    if user.label is not None:
+        lbl = user.label.description
+
+    url = user.profileImageUrl
+    if url is not None:
+        save_media(None, user.id, user.username, url)
+        pass
+
+    if user.profileBannerUrl is not None:
+        save_media(None, user.id, user.username, url)
+        pass
+
+    try:
+        thread_session.add_all([UserTable(
+            id=user.id,
+            account_url=user.url,
+            creation_datetime=get_datetime(dt=user.created),
+            description=user.description,
+            display_name=user.displayname,
+            favorites_count=user.favouritesCount,
+            followers_count=user.followersCount,
+            friends_count=user.friendsCount,
+            label=lbl,
+            linked_url=user.linkUrl,
+            listed_count=user.listedCount,
+            location=user.location,
+            protected_account=user.protected,
+            status_count=user.statusesCount,
+            username=user.username,
+            verified=user.verified,
+        )])
+    except Exception as e:  # noqa
+        # logger.error(e)
+        thread_session.close()
+        return
+
+    try:
+        thread_session.commit()
+    except Exception as e:
+        if "UNIQUE constraint" not in e:
+            # logger.error(e)
             global_exists_counter.increment()
             thread_session.close()
             return
-
-        lbl = None
-        if user.label is not None:
-            lbl = user.label.description
-
-        url = user.profileImageUrl
-        if url is not None:
-            jobs.append(ex.submit(save_media,
-                                  None,
-                                  user.id,
-                                  user.username,
-                                  url))
-            pass
-
-        if user.profileBannerUrl is not None:
-            jobs.append(ex.submit(save_media,
-                                  None,
-                                  user.id,
-                                  user.username,
-                                  url))
-            pass
-
-        try:
-            thread_session.add_all([UserTable(
-                id=user.id,
-                account_url=user.url,
-                creation_datetime=get_datetime(dt=user.created),
-                description=user.description,
-                display_name=user.displayname,
-                favorites_count=user.favouritesCount,
-                followers_count=user.followersCount,
-                friends_count=user.friendsCount,
-                label=lbl,
-                linked_url=user.linkUrl,
-                listed_count=user.listedCount,
-                location=user.location,
-                protected_account=user.protected,
-                status_count=user.statusesCount,
-                username=user.username,
-                verified=user.verified,
-            )])
-        except Exception as e:
-            # logger.error(e)
-            thread_session.close()
-            return
-
-        try:
-            thread_session.commit()
-        except Exception as e:
-            if "UNIQUE constraint" not in e:
-                # logger.error(e)
-                global_exists_counter.increment()
-                thread_session.close()
-                return
-        # logger.debug(f"Saved Username: {user.username}")
-        my_global_counter.increment()
-        thread_session.close()
+    # logger.debug(f"Saved Username: {user.username}")
+    my_global_counter.increment()
+    thread_session.close()
 
 
 def get_tweet_by_id(new_tweet_id: int, referrer_tweet_id: int):
@@ -343,160 +333,154 @@ def get_tweet_by_id(new_tweet_id: int, referrer_tweet_id: int):
 
 
 def save_tweet(tweet, referrer_tweet_id=None):
-    with ThreadPoolExecutor() as ex:
-        jobs = []
-        thread_session = db_session()
-        exists = thread_session.query(TweetTable).filter(TweetTable.id == tweet.id)  # noqa
+    thread_session = db_session()
+    exists = thread_session.query(TweetTable).filter(TweetTable.id == tweet.id)  # noqa
+    exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
+    if exists is True:
+        global_exists_counter.increment()
+        thread_session.close()
+        return
+
+    save_user(tweet.user)
+
+    hashtags = None
+    if hashtags is not None:
+        _hashtags = ""
+        for tag in hashtags:
+            _hashtags += str(tag) + ", "
+        hashtags = _hashtags.rstrip(', ')
+
+    lat = None
+    lon = None
+    if tweet.coordinates is not None:
+        lat = tweet.coordinates.latitude
+        lon = tweet.coordinates.longitude
+
+    if tweet.media is not None:
+        for media in tweet.media:
+            save_media(media, tweet.id)
+    users_mentioned = tweet.mentionedUsers
+    if tweet.mentionedUsers is not None:
+        _users_mentioned = ""
+        for user in tweet.mentionedUsers:
+            save_user(user)
+            _users_mentioned += str(user.username) + ", "
+        users_mentioned = _users_mentioned.rstrip(', ')
+
+    pl_country = None
+    pl_country_code = None
+    pl_full_name = None
+    pl_name = None
+    pl_type = None
+    if tweet.place is not None:
+        pl_country = tweet.place.country
+        pl_country_code = tweet.place.countryCode
+        pl_full_name = tweet.place.fullName
+        pl_name = tweet.place.name
+        pl_type = tweet.place.type
+
+    q_tweet = None
+    if tweet.quotedTweet is not None:
+        q_tweet = (tweet.quotedTweet).id
+        exists = thread_session.query(TweetTable).filter(TweetTable.id == q_tweet)  # noqa
         exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
-        if exists is True:
+        if exists is False:
+            new_tweet = get_tweet_by_id(q_tweet, tweet.id)
+            save_tweet(new_tweet, q_tweet)
+
+    r_tweet = None
+    if tweet.retweetedTweet is not None:
+        r_tweet = (tweet.retweetedTweet).id
+        exists = thread_session.query(TweetTable).filter(TweetTable.id == r_tweet)  # noqa
+        exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
+        if exists is False:
+            new_tweet = get_tweet_by_id(r_tweet, tweet.id)
+            save_tweet(new_tweet, r_tweet)
+
+    try:
+        thread_session.add_all([TweetTable(
+            id=tweet.id,
+            content=tweet.content,
+            creation_datetime=get_datetime(dt=tweet.date),
+            conversation_id=tweet.conversationId,
+            hashtags=hashtags,
+            language=tweet.lang,
+            latitude=lat,
+            longitude=lon,
+            like_count=tweet.likeCount,
+            mentioned_users=users_mentioned,
+            place_country=pl_country,
+            place_country_code=pl_country_code,
+            place_full_name=pl_full_name,
+            place_name=pl_name,
+            place_type=pl_type,
+            quote_count=tweet.quoteCount,
+            quoted_id=q_tweet,
+            recount=tweet.retweetCount,
+            replied_to_id=tweet.inReplyToTweetId,
+            reply_count=tweet.replyCount,
+            referrer_tweet_id=referrer_tweet_id,
+            retweeted_id=r_tweet,
+            source_app=tweet.sourceLabel,
+            url=tweet.url,
+            user_id=tweet.user.id,
+            username=tweet.user.username,
+        )])
+    except Exception as e:  # noqa
+        # logger.error(e)
+        thread_session.close()
+        return
+
+    try:
+        thread_session.commit()
+    except Exception as e:
+        if "UNIQUE constraint" not in e:
+            # logger.error(e)
             global_exists_counter.increment()
             thread_session.close()
             return
 
-        save_user(tweet.user)
-
-        hashtags = None
-        if hashtags is not None:
-            _hashtags = ""
-            for tag in hashtags:
-                _hashtags += str(tag) + ", "
-            hashtags = _hashtags.rstrip(', ')
-
-        lat = None
-        lon = None
-        if tweet.coordinates is not None:
-            lat = tweet.coordinates.latitude
-            lon = tweet.coordinates.longitude
-
-        if tweet.media is not None:
-            for media in tweet.media:
-                jobs.append(ex.submit(save_media,
-                                      media,
-                                      tweet.id,
-                                      None,
-                                      None))
-        users_mentioned = tweet.mentionedUsers
-        if tweet.mentionedUsers is not None:
-            _users_mentioned = ""
-            for user in tweet.mentionedUsers:
-                save_user(user)
-                _users_mentioned += str(user.username) + ", "
-            users_mentioned = _users_mentioned.rstrip(', ')
-
-        pl_country = None
-        pl_country_code = None
-        pl_full_name = None
-        pl_name = None
-        pl_type = None
-        if tweet.place is not None:
-            pl_country = tweet.place.country
-            pl_country_code = tweet.place.countryCode
-            pl_full_name = tweet.place.fullName
-            pl_name = tweet.place.name
-            pl_type = tweet.place.type
-
-        q_tweet = None
-        if tweet.quotedTweet is not None:
-            q_tweet = (tweet.quotedTweet).id
-            exists = thread_session.query(TweetTable).filter(TweetTable.id == q_tweet)  # noqa
-            exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
-            if exists is False:
-                new_tweet = get_tweet_by_id(q_tweet, tweet.id)
-                jobs.append(ex.submit(save_tweet, new_tweet, q_tweet))
-
-        r_tweet = None
-        if tweet.retweetedTweet is not None:
-            r_tweet = (tweet.retweetedTweet).id
-            exists = thread_session.query(TweetTable).filter(TweetTable.id == r_tweet)  # noqa
-            exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
-            if exists is False:
-                new_tweet = get_tweet_by_id(r_tweet, tweet.id)
-                jobs.append(ex.submit(save_tweet, new_tweet, r_tweet))
-
-        try:
-            thread_session.add_all([TweetTable(
-                id=tweet.id,
-                content=tweet.content,
-                creation_datetime=get_datetime(dt=tweet.date),
-                conversation_id=tweet.conversationId,
-                hashtags=hashtags,
-                language=tweet.lang,
-                latitude=lat,
-                longitude=lon,
-                like_count=tweet.likeCount,
-                mentioned_users=users_mentioned,
-                place_country=pl_country,
-                place_country_code=pl_country_code,
-                place_full_name=pl_full_name,
-                place_name=pl_name,
-                place_type=pl_type,
-                quote_count=tweet.quoteCount,
-                quoted_id=q_tweet,
-                recount=tweet.retweetCount,
-                replied_to_id=tweet.inReplyToTweetId,
-                reply_count=tweet.replyCount,
-                referrer_tweet_id=referrer_tweet_id,
-                retweeted_id=r_tweet,
-                source_app=tweet.sourceLabel,
-                url=tweet.url,
-                user_id=tweet.user.id,
-                username=tweet.user.username,
-            )])
-        except Exception as e:
-            # logger.error(e)
-            thread_session.close()
-            return
-
-        try:
-            thread_session.commit()
-        except Exception as e:
-            if "UNIQUE constraint" not in e:
-                # logger.error(e)
-                global_exists_counter.increment()
-                thread_session.close()
-                return
-
-        # logger.debug(f"Saved Tweet ID: {tweet.id}")
-        my_global_counter.increment()
-        thread_session.close()
+    # logger.debug(f"Saved Tweet ID: {tweet.id}")
+    my_global_counter.increment()
+    thread_session.close()
 
 
 def archive_accounts(account):
-    with ThreadPoolExecutor() as ex:
-        jobs = []
-        for _tmp, tweet in enumerate(sntwitter.TwitterSearchScraper(f'''
-                                        from:{account}
-                                        include:nativeretweets
-                                        ''', top=True).get_items()):
-            jobs.append(ex.submit(save_tweet, tweet))
-            elapsed_time = datetime.now() - start_time
-            et_float = elapsed_time.total_seconds()
-            saves_sec = round((my_global_counter.value() / et_float), 1)
-            skips_sec = round((global_exists_counter.value() / et_float), 1)
-            ops_sec = round(((my_global_counter.value() + global_exists_counter.value()) / et_float), 1)  # noqa
+    for _tmp, tweet in enumerate(sntwitter.TwitterSearchScraper(f'''
+                                    from:{account}
+                                    include:nativeretweets
+                                    ''', top=True).get_items()):
+        with ThreadPoolExecutor() as ex:
+            ex.submit(save_tweet, tweet)
+        elapsed_time = datetime.now() - start_time
+        et_float = elapsed_time.total_seconds()
+        saves_sec = round((my_global_counter.value() / et_float), 1)
+        skips_sec = round((global_exists_counter.value() / et_float), 1)
+        ops_sec = round(((my_global_counter.value() + global_exists_counter.value()) / et_float), 1)  # noqa
 
-            table = [
-                    ["Current Time", datetime.now()],  # noqa
-                    ["Elapsed Time", elapsed_time],
-                    ["", ""],
-                    ["Current Account", f"@{account}"],
-                    ["Archived Items", "{:,}".format(my_global_counter.value())],
-                    ["Skipped Items", "{:,}".format(global_exists_counter.value())],
-                    ["", ""],
-                    ["Saves/sec", saves_sec],
-                    ["Skips/sec", skips_sec],
-                    ["Ops/sec", ops_sec],
-                    ]
-            headers = ["Value", "Stats",]  # noqa
-            tabulate.PRESERVE_WHITESPACE = True
-            print(tabulate.tabulate(table, headers, tablefmt="pretty", numalign="left", stralign="left", maxcolwidths=30))  # noqa
-            print("\n")
+        table = [
+                ["Current Time", datetime.now()],  # noqa
+                ["Elapsed Time", elapsed_time],
+                ["", ""],
+                ["Current Account", f"@{account}"],
+                ["Archived Items", "{:,}".format(my_global_counter.value())],
+                ["Skipped Items", "{:,}".format(global_exists_counter.value())],  # noqa
+                ["", ""],
+                ["Saves/sec", saves_sec],
+                ["Skips/sec", skips_sec],
+                ["Ops/sec", ops_sec],
+                ]
+        headers = ["Value", "Stats",]  # noqa
+        tabulate.PRESERVE_WHITESPACE = True
+        print(tabulate.tabulate(table, headers, tablefmt="pretty", numalign="left", stralign="left", maxcolwidths=30))  # noqa
+        print("\n")
 
 
 def main():
     # logger.debug("Initializing database")
     Base.metadata.create_all(engine, checkfirst=True)
-    for chunk in grouper(TWITTER_ACCOUNTS, 3):
+    ln = len(TWITTER_ACCOUNTS)
+    for chunk in grouper(TWITTER_ACCOUNTS, ln):
         with ThreadPoolExecutor() as executor:
             for account in chunk:
                 executor.submit(archive_accounts, account)
