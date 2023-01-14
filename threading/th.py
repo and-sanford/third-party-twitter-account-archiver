@@ -13,7 +13,7 @@ from itertools import zip_longest
 import snscrape.modules.twitter as sntwitter
 import tabulate
 from loguru import logger
-from sqlalchemy import (BigInteger, BLOB, Column, DateTime, Float, ForeignKey,
+from sqlalchemy import (BLOB, BigInteger, Column, DateTime, Float, ForeignKey,
                         Integer, MetaData, String, create_engine, literal)
 from sqlalchemy.orm import declarative_base, scoped_session, sessionmaker
 from sqlalchemy.pool import QueuePool
@@ -24,7 +24,7 @@ start_time = datetime.now()
 meta = MetaData()
 Base = declarative_base()
 cwd = os.getcwd()
-db_name = (cwd + "/threading/archives/twitter_archive.db")+'?check_same_thread=False'  # noqa
+db_name = (cwd + "/threading/archives/twitter_archive_media.db")+'?check_same_thread=False'  # noqa
 engine = create_engine(f"sqlite:///{db_name}",
                        echo=False,
                        future=True,
@@ -36,6 +36,8 @@ db_session = scoped_session(sessionmaker(autocommit=False,
 
 
 def grouper(iterable, n, fillvalue=None):
+    """Enables global counts
+    """
     args = [iter(iterable)] * n
     return zip_longest(*args, fillvalue=fillvalue)
 
@@ -124,59 +126,7 @@ class MediaUsersTable(Base):
     user_id = Column("user_id", ForeignKey("users.id"), primary_key=True)
 
 
-TWITTER_ACCOUNTS = ["wartranslated"]
-# TWITTER_ACCOUNTS = ["sarahkendzior",
-#                     "andreachalupa",
-#                     "gaslitnation",
-#                     "AlexandraChalup",
-#                     "TimothyDSnyder",
-#                     "JYSexton",
-#                     "benFranklin2018",
-#                     "ContextFall",
-#                     "wartranslated",
-#                     "DefMon3",
-#                     "KyivIndependent",
-#                     "ZelenskyyUa",
-#                     "DefenceU",
-#                     "Ukraine",
-#                     "DefenceHQ",
-#                     "JuliaDavisNews",
-#                     "DarthPutinKGB",
-#                     "brooklynmarie",
-#                     "OlgaNYC1211",
-#                     "ruthbenghiat",
-#                     "RVAwonk",
-#                     "leahmcelrath",
-#                     "nolanwpeterson",
-#                     "IAPonomarenko",
-#                     "ElieNYC",
-#                     "anders_aslund",
-#                     "MarkHertling",
-#                     "InternetH0F",
-#                     "Sputnik_Not",
-#                     "uamemesforces",
-#                     "saintjavelin",
-#                     "realDonaldTrump",
-#                     "POTUS",
-#                     "k8em0",
-#                     "SwiftOnSecurity",
-#                     "dotMudge",
-#                     "briankrebs",
-#                     "GossiTheDog",
-#                     "vxunderground",
-#                     "GretaThunberg",
-#                     "AOC",
-#                     "NWSSaltLakeCity",
-#                     "coffeebreak_YT",
-#                     "BenWinslow",
-#                     "KSLcom",
-#                     "guardian",
-#                     "CISAgov",
-#                     "DarknetDiaries",
-#                     "maddiestone",
-#                     "a_greenberg",
-#                     "MalwareTechBlog",
-#                     ]
+TWITTER_ACCOUNTS = ["example1", "example2"]
 
 
 class Counter:
@@ -237,6 +187,19 @@ def get_datetime(dt=None, string_conversion=False, save_file=False):
 
 
 def convert_m3u8(url, id):
+    """Converts m3u8 video URLs to
+    mp4. Twitter recently started
+    encoding at least some of their
+    videos in m3u8 playlist format.
+
+    Args:
+        url (string): m3u8 playlist url
+        id (int): Tweet or User ID
+
+    Returns:
+        content_blob (BLOB): Binary version of mp4 file
+        fn (string): Filename, to be deleted later
+    """
     random.seed(id)
     r = random.randint(0, id)
     n = datetime.now().strftime("%M%S%f")
@@ -260,6 +223,19 @@ def convert_m3u8(url, id):
 
 
 def save_media(media, tweet_or_user_id: int, username: str, url: str):  # noqa
+    """Saves media objects. Assigns each
+    a unique ID (which is a sha256 hash)
+    to avoid duplicates.
+
+    Args:
+        media (snscrape.Tweet.Media): Media object
+        tweet_or_user_id (int): Tweet or User ID
+        username (str): Username
+        url (str): Media object's URL
+
+    Returns:
+        int: Media object ID
+    """
     thread_session = db_session()
     # logger.debug(f"Getting media from tweet or user id {tweet_or_user_id}")
     content_blob = None
@@ -284,9 +260,9 @@ def save_media(media, tweet_or_user_id: int, username: str, url: str):  # noqa
                 views = media.views
                 if media.thumbnailUrl is not None:
                     thumbnail_id = save_media(None,
-                                          tweet_or_user_id,
-                                          None,
-                                          media.thumbnailUrl)
+                                              tweet_or_user_id,
+                                              None,
+                                              media.thumbnailUrl)
             elif "Photo" in media_type:
                 url = media.fullUrl
             elif "Gif" in media_type:
@@ -329,7 +305,7 @@ def save_media(media, tweet_or_user_id: int, username: str, url: str):  # noqa
         except Exception as e:  # noqa
             # logger.error(e)
             thread_session.close()
-            return
+            return id
 
         try:
             thread_session.commit()
@@ -346,6 +322,11 @@ def save_media(media, tweet_or_user_id: int, username: str, url: str):  # noqa
 
 
 def save_user(user):
+    """Saves a user/twitter account profile
+
+    Args:
+        user (snscrape.Tweet.User): User object
+    """
     thread_session = db_session()
     exists = thread_session.query(UserTable).filter(UserTable.id == user.id)  # noqa
     exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
@@ -405,9 +386,7 @@ def save_user(user):
 
 
 def get_tweet_by_id(new_tweet_id: int, referrer_tweet_id: int):
-    """Archives a tweet given the tweet's ID, rather than
-    by a search (which is how the rest of the program
-    functions).
+    """Archives a tweet given a tweet's ID
 
     Args:
         new_tweet_id (int): New tweet to be archived (e.g., a
@@ -427,6 +406,14 @@ def get_tweet_by_id(new_tweet_id: int, referrer_tweet_id: int):
 
 
 def save_tweet(tweet, referrer_tweet_id=None):
+    """Saves a tweet and its metadata. If applicable,
+    links tweets together.
+
+    Args:
+        tweet (snscrape.Tweet): Tweet object
+        referrer_tweet_id (int, optional): Foreign key of the originating
+        tweet (e.g., the previous tweet in a thread). Defaults to None.
+    """
     thread_session = db_session()
     exists = thread_session.query(TweetTable).filter(TweetTable.id == tweet.id)  # noqa
     exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
@@ -542,15 +529,19 @@ def save_tweet(tweet, referrer_tweet_id=None):
 
 
 def archive_accounts(account):
+    """Archives the tweets of a given twitter
+    user/account
+
+    Args:
+        account (str): Twitter user/account handle
+    """
     for _tmp, tweet in enumerate(sntwitter.TwitterSearchScraper(f'''
                                     from:{account}
                                     include:nativeretweets
                                     ''').get_items()):
-        save_tweet(tweet)
-        '''
         with ThreadPoolExecutor() as ex:
             ex.submit(save_tweet, tweet)
-        '''
+
         elapsed_time = datetime.now() - start_time
         et_float = elapsed_time.total_seconds()
         saves_sec = round((my_global_counter.value() / et_float), 1)
@@ -576,17 +567,16 @@ def archive_accounts(account):
 
 
 def main():
+    """Let's gooooo!!
+    """
     # logger.debug("Initializing database")
     Base.metadata.create_all(engine, checkfirst=True)
-    for account in TWITTER_ACCOUNTS:
-        archive_accounts(account)
-    '''
     ln = len(TWITTER_ACCOUNTS)
     for chunk in grouper(TWITTER_ACCOUNTS, ln):
         with ThreadPoolExecutor() as executor:
             for account in chunk:
                 executor.submit(archive_accounts, account)
-    '''
+
     db_session.close()
     elapsed_time = datetime.now() - start_time
     et_float = elapsed_time.total_seconds()
