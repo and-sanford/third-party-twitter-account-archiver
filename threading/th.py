@@ -207,7 +207,7 @@ def convert_m3u8(url, id):
     fn = cwd + "/threading/m3u8/" + str(id) + random_seed + ".mp4"
     content_blob = None
     try:
-        subprocess.run(['ffmpeg', '-i', url, '-bsf:a', 'aac_adtstoasc', '-vcodec', 'copy', '-c', 'copy', '-crf', '50', fn], stdout=subprocess.DEVNULL)  # noqa
+        subprocess.run(['ffmpeg', '-i', url, '-bsf:a', 'aac_adtstoasc', '-vcodec', 'copy', '-c', 'copy', '-crf', '50', fn], stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)  # noqa
     except Exception as e:
         logger.error(e)
         return None
