@@ -234,8 +234,8 @@ class ProgramStats:
         self.users_total = self.users_saved + self.users_skipped
         self.medias_total = self.medias_saved + self.medias_skipped
 
-        self.total_saved = self.tweets_skipped + self.users_skipped + self.medias_skipped  # noqa
-        self.total_skipped = self.tweets_saved + self.users_saved + self.medias_saved  # noqa
+        self.total_skipped = self.tweets_skipped + self.users_skipped + self.medias_skipped  # noqa
+        self.total_saved = self.tweets_saved + self.users_saved + self.medias_saved  # noqa
         self.total_total = self.tweets_total + self.users_total + self.medias_total  # noqa
 
         elapsed_time = datetime.now() - start_time
