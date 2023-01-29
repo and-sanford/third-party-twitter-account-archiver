@@ -219,7 +219,7 @@ class ProgramStats:
             self.id = user.id
             self.obj_type = "User"
         elif media_id is not None:
-            self.id = str(media_id)[15]
+            self.id = str(media_id)[:15]
             self.obj_type = "Media"
 
         self.tweets_saved = tweet_counter.value()
@@ -270,7 +270,7 @@ class ProgramStats:
                 ["Username", f"@{self.username}", "", ""],
                 ["Datetime", self.dt, "", ""],
                 ["ID", self.id, "", ""],
-                ["Conversation ID", self.conversation_id, "", ""],                
+                ["Conversation ID", self.conversation_id, "", ""],
                 ["", "", "", ""],
                 ["", "", "", ""],
                 ["", "Saved", "Skipped", "Total"],
