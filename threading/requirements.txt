@@ -1,4 +1,0 @@
-snscrape
-SQLAlchemy
-structlog
-tabulate
