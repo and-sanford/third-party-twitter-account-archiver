@@ -24,7 +24,7 @@ start_time = datetime.now()
 meta = MetaData()
 Base = declarative_base()
 cwd = os.getcwd()
-db_name = (cwd + "/archives/twitter_archive_test.db")+'?check_same_thread=False'  # noqa
+db_name = (cwd + "/archives/twitter_archive.db")+'?check_same_thread=False'  # noqa
 engine = create_engine(f"sqlite:///{db_name}",
                        echo=False,
                        future=True,
