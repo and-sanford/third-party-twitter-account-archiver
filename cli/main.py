@@ -24,7 +24,7 @@ start_time = datetime.now()
 meta = MetaData()
 Base = declarative_base()
 cwd = os.getcwd()
-db_name = (cwd + "/cli/archives/twitter_archive.db")+'?check_same_thread=False'  # noqa
+db_name = (cwd + "/archives/twitter_archive_test.db")+'?check_same_thread=False'  # noqa
 engine = create_engine(f"sqlite:///{db_name}",
                        echo=False,
                        future=True,
@@ -36,7 +36,7 @@ db_session = scoped_session(sessionmaker(autocommit=False,
 
 
 def grouper(iterable, n, fillvalue=None):
-    """Enables lists to be grouped
+    """Enables global counts
     """
     args = [iter(iterable)] * n
     return zip_longest(*args, fillvalue=fillvalue)
@@ -78,6 +78,7 @@ class UserTable(Base):
     account_url = Column('account_url', String)
     creation_datetime = Column('creation_datetime', DateTime)
     description = Column('description', String)
+    description_links = Column('description_links', String)
     display_name = Column('display_name', String)
     favorites_count = Column('favorites_count', Integer)
     followers_count = Column('followers_count', Integer)
@@ -122,15 +123,37 @@ class MediaUsersTable(Base):
     user_id = Column("user_id", ForeignKey("users.id"), primary_key=True)
 
 
-class ExternalPages(Base):
-    __tablename__ = "external_pages"
-    page_id = Column("id", Integer, primary_key=True)
+class WebPagesTable(Base):
+    __tablename__ = "web_pages"
+    id = Column(String, primary_key=True)
+    url = Column("url", String)
+    warc = Column("warc", BLOB)
+    html = Column("html", String)
+    plaintext = Column("plaintext", String)
+    pdf = Column("pdf", BLOB)
+    internet_archive_link = Column("internet_archive_link", String)
+    archive_today_link = Column("archive_today_link", String)
 
 
-TWITTER_ACCOUNTS = [
-                    "example1",
-                    "example2",
-                    ]
+class WebpagesTweetsTable(Base):
+    __tablename__ = "webpages_tweets"
+    webpage_id = Column("webpage_id",
+                        ForeignKey("web_pages.id"),
+                        primary_key=True
+                        )
+    tweet_id = Column("tweet_id", ForeignKey("tweets.id"), primary_key=True)
+
+
+class WebpagesUsersTable(Base):
+    __tablename__ = "webpages_users"
+    webpage_id = Column("webpage_id",
+                        ForeignKey("web_pages.id"),
+                        primary_key=True
+                        )
+    user_id = Column("user_id", ForeignKey("users.id"), primary_key=True)
+
+
+TWITTER_ACCOUNTS = ["example1", "example2"]
 
 
 class Counter:
@@ -163,6 +186,8 @@ media_exists_counter = CounterExists()
 tweet_counter = Counter()
 user_counter = Counter()
 media_counter = Counter()
+webpage_counter = Counter()
+webpage_exists_counter = Counter()
 
 
 def get_datetime(dt=None, string_conversion=False, save_file=False):
@@ -225,18 +250,21 @@ class ProgramStats:
         self.tweets_saved = tweet_counter.value()
         self.users_saved = user_counter.value()
         self.medias_saved = media_counter.value()
+        self.webpage_saved = webpage_counter.value()
 
         self.tweets_skipped = tweet_exists_counter.value()
         self.users_skipped = user_exists_counter.value()
         self.medias_skipped = media_exists_counter.value()
+        self.webpage_skipped = webpage_exists_counter.value()
 
         self.tweets_total = self.tweets_saved + self.tweets_skipped
         self.users_total = self.users_saved + self.users_skipped
         self.medias_total = self.medias_saved + self.medias_skipped
+        self.webpage_total = self.webpage_saved + self.webpage_skipped
 
-        self.total_skipped = self.tweets_skipped + self.users_skipped + self.medias_skipped  # noqa
-        self.total_saved = self.tweets_saved + self.users_saved + self.medias_saved  # noqa
-        self.total_total = self.tweets_total + self.users_total + self.medias_total  # noqa
+        self.total_skipped = self.tweets_skipped + self.users_skipped + self.medias_skipped + self.webpage_skipped  # noqa
+        self.total_saved = self.tweets_saved + self.users_saved + self.medias_saved + self.webpage_skipped  # noqa
+        self.total_total = self.tweets_total + self.users_total + self.medias_total + self.webpage_total  # noqa
 
         elapsed_time = datetime.now() - start_time
         et_float = elapsed_time.total_seconds()
@@ -255,13 +283,15 @@ class ProgramStats:
         self.media_skips_sec = round((self.medias_skipped / et_float), 1)
         self.media_ops_sec = round(((self.medias_total) / et_float), 1)
 
+        self.webpage_saves_sec = round((self.webpage_saved / et_float), 1)
+        self.webpage_skips_sec = round((self.webpage_skipped / et_float), 1)
+        self.webpage_ops_sec = round(((self.webpage_total) / et_float), 1)
+
         self.total_saves_sec = round((self.total_saved / et_float), 1)
         self.total_skips_sec = round((self.total_skipped / et_float), 1)
         self.total_ops_sec = round(((self.total_total) / et_float), 1)
 
     def print_stats(self):
-        """Prints program stats
-        """
         table = [
                 ["Current Time", get_datetime(datetime.now(), string_conversion=True), "", ""],  # noqa
                 ["Elapsed Time", self.elapsed_time, "", ""],
@@ -290,7 +320,12 @@ class ProgramStats:
                  "{:,}".format(self.medias_skipped),
                  "{:,}".format(self.medias_total),
                  ],
-                ["  Total",
+                 ["  Webpages",
+                  "{:,}".format(self.webpage_saved),
+                  "{:,}".format(self.webpage_skipped),
+                  "{:,}".format(self.webpage_total),
+                  ],
+                ["Total",
                  "{:,}".format(self.total_saved),
                  "{:,}".format(self.total_skipped),
                  "{:,}".format(self.total_total),
@@ -312,7 +347,12 @@ class ProgramStats:
                  "{:,}".format(self.media_skips_sec),
                  "{:,}".format(self.media_ops_sec),
                  ],
-                ["  Total",
+                 ["  Webpages",
+                  "{:,}".format(self.webpage_saves_sec),
+                  "{:,}".format(self.webpage_skips_sec),
+                  "{:,}".format(self.media_ops_sec),
+                  ],
+                ["Total",
                  "{:,}".format(self.total_saves_sec),
                  "{:,}".format(self.total_skips_sec),
                  "{:,}".format(self.total_ops_sec),
@@ -431,33 +471,34 @@ def save_media(media, tweet_or_user_id: int, username: str, url: str):  # noqa
         exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
         if exists is True:
             media_exists_counter.increment()
-            thread_session.close()
-            return
-        try:
-            thread_session.add_all([MediaTable(
-                    id=id,
-                    content_blob=content_blob,
-                    alt_text=alt_text,
-                    duration=duration,
-                    url=url,
-                    views=views,
-                    thumbnail_id=thumbnail_id,
-                )])
-            if username is None:
-                thread_session.add_all([MediaTweetsTable(
+            try:
+                if username is None:
+                    thread_session.add_all([MediaTweetsTable(
                         media_id=id,
                         tweet_id=tweet_or_user_id,
                     )])
-            else:
-                thread_session.add_all([MediaUsersTable(
-                        media_id=id,
-                        user_id=tweet_or_user_id,
+                else:
+                    thread_session.add_all([MediaUsersTable(
+                            media_id=id,
+                            user_id=tweet_or_user_id,
+                        )])
+            except Exception as e:  # noqa
+                # logger.error(e)
+                pass
+        else:
+            try:
+                thread_session.add_all([MediaTable(
+                        id=id,
+                        content_blob=content_blob,
+                        alt_text=alt_text,
+                        duration=duration,
+                        url=url,
+                        views=views,
+                        thumbnail_id=thumbnail_id,
                     )])
-        except Exception as e:  # noqa
-            logger.error(e)
-            thread_session.close()
-            return id
-
+            except Exception as e:  # noqa
+                # logger.error(e)
+                pass
         try:
             thread_session.commit()
             # logger.debug(f"Saved Media ID: {id}")
@@ -473,6 +514,89 @@ def save_media(media, tweet_or_user_id: int, username: str, url: str):  # noqa
     return id
 
 
+def save_webpage(url, twitter_id, type):
+    thread_session = db_session()
+    webpage_id = sha512(str(url).encode('utf-8')).hexdigest()
+
+    def check_exists(webpage_id, twitter_id, table):
+        exists = False
+        if table == WebPagesTable:
+            exists = thread_session.query(WebPagesTable).filter(WebPagesTable.id == str(webpage_id))  # noqa
+            exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
+        elif table == WebpagesTweetsTable:
+            exists_tweet = thread_session.query(WebpagesTweetsTable).filter(WebpagesTweetsTable.tweet_id == str(twitter_id))  # noqa
+            exists_tweet = thread_session.query(literal(True)).filter(exists_tweet.exists()).scalar()  # noqa
+            exists_webpage = thread_session.query(WebpagesTweetsTable).filter(WebpagesTweetsTable.webpage_id == str(webpage_id))  # noqa
+            exists_webpage = thread_session.query(literal(True)).filter(exists_webpage.exists()).scalar()  # noqa
+            if exists_tweet is True and exists_webpage is True:
+                exists = True
+            else:
+                exists = False
+        elif table == WebpagesUsersTable:
+            exists_user = thread_session.query(WebpagesUsersTable).filter(WebpagesUsersTable.user_id == str(twitter_id))  # noqa
+            exists_user = thread_session.query(literal(True)).filter(exists_user.exists()).scalar()  # noqa
+            exists_webpage = thread_session.query(WebpagesUsersTable).filter(WebpagesUsersTable.webpage_id == str(webpage_id))  # noqa
+            exists_webpage = thread_session.query(literal(True)).filter(exists_webpage.exists()).scalar()  # noqa
+            if exists_user is True and exists_webpage is True:
+                exists = True
+            else:
+                exists = False
+        else:
+            exists = False
+        if exists is None:
+            exists = False
+        return exists
+
+    if type == TweetTable:
+        table = WebpagesTweetsTable
+    elif type == UserTable:
+        table = WebpagesUsersTable
+
+    if check_exists(webpage_id, twitter_id, table) is True:
+        webpage_exists_counter.increment()
+        return  # TODO increment stats
+    else:
+        try:
+            if table == WebpagesTweetsTable:
+                thread_session.add_all([table(
+                            webpage_id=webpage_id,
+                            tweet_id=twitter_id,
+                        )])
+            elif table == WebpagesUsersTable:
+                thread_session.add_all([table(
+                            webpage_id=webpage_id,
+                            user_id=twitter_id,
+                        )])
+            if check_exists(webpage_id, None, WebPagesTable) is True:
+                webpage_exists_counter.increment()
+            else:
+                # TODO: download archive
+                # if it does not exists upload to archive
+                warc = None
+                html = None
+                plaintext = None
+                pdf = None
+                internet_archive_link = None
+                archive_today_link = None
+                thread_session.add_all([WebPagesTable(
+                                id=webpage_id,
+                                url=url,
+                                warc=warc,
+                                html=html,
+                                plaintext=plaintext,
+                                pdf=pdf,
+                                internet_archive_link=internet_archive_link,
+                                archive_today_link=archive_today_link,
+                            )])
+                webpage_counter.increment()
+            thread_session.commit()
+        except Exception as e:  # noqa
+            if "UNIQUE constraint" not in str(e):
+                # logger.error(e)
+                pass
+        thread_session.close()
+
+
 def save_user(user):
     """Saves a user/twitter account profile
 
@@ -480,21 +604,22 @@ def save_user(user):
         user (snscrape.Tweet.User): User object
     """
     thread_session = db_session()
-    exists = thread_session.query(UserTable).filter(UserTable.id == user.id)  # noqa
-    exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
-    if exists is True:
-        user_exists_counter.increment()
-        thread_session.close()
-        return
 
     lbl = None
     if user.label is not None:
         lbl = user.label.description
 
+    description_links = None
+    dl = user.descriptionLinks
+    if dl is not None:
+        description_links = (dl[0]).url
+        save_webpage(description_links, user.id, UserTable)
+
     links = None
     ul = user.link
     if ul is not None:
         links = ul.url
+        save_webpage(links, user.id, UserTable)
 
     url = user.profileImageUrl
     if url is not None:
@@ -511,6 +636,7 @@ def save_user(user):
             account_url=user.url,
             creation_datetime=get_datetime(dt=user.created),
             description=user.renderedDescription,
+            description_links=description_links,
             display_name=user.displayname,
             favorites_count=user.favouritesCount,
             followers_count=user.followersCount,
@@ -534,7 +660,7 @@ def save_user(user):
         thread_session.commit()
     except Exception as e:
         if "UNIQUE constraint" not in str(e):
-            logger.error(e)
+            # logger.error(e)
             user_exists_counter.increment()
             thread_session.close()
             return
@@ -583,18 +709,33 @@ def save_tweet(tweet):
         tweet = get_tweet_by_id(tweet.id)
 
     thread_session = db_session()
-    exists = thread_session.query(TweetTable).filter(TweetTable.id == tweet.id)  # noqa
-    exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
-    if exists is True:
+
+    def check_exists(term, table):
+        exists = False
+        if table is TweetTable:
+            exists = thread_session.query(TweetTable).filter(TweetTable.id == str(term))  # noqa
+            exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
+        elif table is UserTable:
+            exists = thread_session.query(UserTable).filter(UserTable.username == str(term))  # noqa
+            exists = thread_session.query(literal(True)).filter(exists.exists()).scalar()  # noqa
+        if exists is None:
+            exists = False
+        return exists
+
+    if check_exists(tweet.id, TweetTable) is True:
         tweet_exists_counter.increment()
         thread_session.close()
         return
 
-    try:
-        save_user(tweet.user)
-    except Exception as e:
-        logger.error(e)
-        pass
+    if check_exists(tweet.user.username, UserTable) is True:
+        user_exists_counter.increment()
+    else:
+        try:
+            save_user(tweet.user)
+        except Exception as e:  # noqa
+            pass
+            # logger.error(e)
+            pass
 
     conversation_id = tweet.conversationId
 
@@ -615,6 +756,7 @@ def save_tweet(tweet):
     tl = tweet.links
     if tl is not None:
         links = (tl[0]).url
+        save_webpage(links, tweet.id, TweetTable)
     if tweet.media is not None:
         for media in tweet.media:
             save_media(media, tweet.id, None, None)
@@ -622,7 +764,10 @@ def save_tweet(tweet):
     if tweet.mentionedUsers is not None:
         _users_mentioned = ""
         for user in tweet.mentionedUsers:
-            save_user(user)
+            if check_exists(user.username, UserTable) is True:
+                user_exists_counter.increment()
+            else:
+                save_user(user)
             _users_mentioned += str(user.username) + ", "
         users_mentioned = _users_mentioned.rstrip(', ')
 
@@ -670,27 +815,37 @@ def save_tweet(tweet):
             view_count=tweet.viewCount,
         )])
     except Exception as e:  # noqa
-        logger.error(e)
+        # logger.error(e)
+        pass
 
     try:
         thread_session.commit()
         tweet_counter.increment()
     except Exception as e:
         if "UNIQUE constraint" not in str(e):
-            logger.error(e)
+            # logger.error(e)
             tweet_exists_counter.increment()
     thread_session.close()
 
     ProgramStats(tweet=tweet).print_stats()
 
     if tweet.quotedTweet is not None:
-        save_tweet(tweet.quotedTweet)
+        if check_exists(tweet.quotedTweet.id, TweetTable) is True:
+            tweet_exists_counter.increment()
+        else:
+            save_tweet(tweet.quotedTweet)
     if tweet.retweetedTweet is not None:
-        save_tweet(tweet.retweetedTweet)
+        if check_exists(tweet.retweetedTweet.id, TweetTable) is True:
+            tweet_exists_counter.increment()
+        else:
+            save_tweet(tweet.retweetedTweet)
     if replied_to_id is not None:
         rp_tweet = get_tweet_by_id(replied_to_id)
         if rp_tweet is not None:
-            save_tweet(rp_tweet)
+            if check_exists(rp_tweet.id, TweetTable) is True:
+                tweet_exists_counter.increment()
+            else:
+                save_tweet(rp_tweet)
 
     if conversation_id is not None:
         for _tmp, c_tweet in enumerate(sntwitter.TwitterSearchScraper(f'''
@@ -698,7 +853,10 @@ def save_tweet(tweet):
                 -filter:unsafe (filter:safe OR -filter:safe)"
                 ''').get_items()):
             if c_tweet is not None:
-                save_tweet(c_tweet)
+                if check_exists(c_tweet.id, TweetTable) is True:
+                    tweet_exists_counter.increment()
+                else:
+                    save_tweet(c_tweet)
 
 
 def archive_accounts(account):
