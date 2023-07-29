@@ -1,3 +1,8 @@
+# Archived 
+Due to changes to Twitter in 2023, this code no longer works. If things change (e.g., [snscrape](https://github.com/JustAnotherArchivist/snscrape) is updated, another tool emerges, etc.), I might fix this. Huge thanks to [JustAnotherArchivist](https://github.com/JustAnotherArchivist) for their amazing work with snscrape.
+
+
+
 # Twitter Archiver for Third-party Accounts
 This program uses [snscrape](https://github.com/JustAnotherArchivist/snscrape) to archive all publicly available tweets from a list of Twitter users (or, with some minor modifications, results from (advanced) Twitter searches) to a local [SQLite](https://www.sqlite.org/index.html) DB, along with: 
 * Entire chains of retweets, quoted tweets replied to tweets 
